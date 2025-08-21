@@ -1,0 +1,39 @@
+{
+  "name": "ironlogic3-client",
+  "version": "1.0.0",
+  "description": "Next.js client app for IronLogic3 with PWA support",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@mantine/core": "^7.3.2",
+    "@mantine/dates": "^7.3.2",
+    "@mantine/form": "^7.3.2",
+    "@mantine/hooks": "^7.3.2",
+    "@mantine/modals": "^7.17.8",
+    "@mantine/notifications": "^7.17.8",
+    "@tabler/icons-react": "^2.47.0",
+    "axios": "^1.6.2",
+    "dayjs": "^1.11.10",
+    "mantine-datatable": "^7.17.1",
+    "next": "^14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "^14.0.4",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "ironlogic3",
+  "version": "1.0.0",
+  "description": "Gym management system with client app and PWA",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "build": "npm run build --workspace=server && npm run build --workspace=client",
+    "start": "npm run start --workspace=server",
+    "lint": "npm run lint --workspace=server && npm run lint --workspace=client",
+    "type-check": "npm run type-check --workspace=server && npm run type-check --workspace=client",
+    "test": "npm run test --workspace=server && npm run test --workspace=client"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "author": "IronLogic3 Team",
+  "license": "MIT"
+}
