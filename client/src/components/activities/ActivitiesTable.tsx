@@ -259,7 +259,7 @@ export function ActivitiesTable({
                   </Table.Td>
                   
                   <Table.Td>
-                    <Text size="sm">{activity.activityGroup?.name || 'Unknown'}</Text>
+                    <Text size="sm">{activity.activityGroupName}</Text>
                   </Table.Td>
                   
                   <Table.Td>

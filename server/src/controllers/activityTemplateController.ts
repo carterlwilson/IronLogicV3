@@ -78,24 +78,40 @@ export const getActivities = async (req: AuthRequest, res: Response): Promise<vo
         .skip(skip)
         .limit(limitNum)
         .populate('gymId', 'name')
-        .populate('activityGroupId', 'name description')
         .lean(),
       ActivityTemplate.countDocuments(filters)
     ]);
+    
+    // Get unique activity group IDs for bulk lookup
+    const activityGroupIds = activities
+      .map((activity: any) => activity.activityGroupId)
+      .filter(id => id); // Filter out any null/undefined values
     
     // Get unique benchmark template IDs for bulk lookup
     const benchmarkTemplateIds = activities
       .filter((activity: any) => activity.benchmarkTemplateId)
       .map((activity: any) => activity.benchmarkTemplateId);
     
-    // Bulk fetch benchmark templates
-    const benchmarkTemplates = benchmarkTemplateIds.length > 0 
-      ? await BenchmarkTemplate.find({ _id: { $in: benchmarkTemplateIds }, isActive: true })
-          .select('name type unit')
-          .lean()
-      : [];
+    // Bulk fetch activity groups and benchmark templates
+    const [activityGroups, benchmarkTemplates] = await Promise.all([
+      activityGroupIds.length > 0 
+        ? ActivityGroup.find({ _id: { $in: activityGroupIds }, isActive: true })
+            .select('name')
+            .lean()
+        : [],
+      benchmarkTemplateIds.length > 0 
+        ? BenchmarkTemplate.find({ _id: { $in: benchmarkTemplateIds }, isActive: true })
+            .select('name type unit')
+            .lean()
+        : []
+    ]);
     
-    // Create a map for quick lookup
+    // Create maps for quick lookup
+    const activityGroupMap = new Map();
+    activityGroups.forEach((group: any) => {
+      activityGroupMap.set(group._id.toString(), group.name);
+    });
+    
     const benchmarkTemplateMap = new Map();
     benchmarkTemplates.forEach((template: any) => {
       benchmarkTemplateMap.set(template._id.toString(), template.name);
@@ -106,11 +122,13 @@ export const getActivities = async (req: AuthRequest, res: Response): Promise<vo
     const hasNextPage = pageNum < totalPages;
     const hasPrevPage = pageNum > 1;
     
-    // Transform activities to include populated activityGroup and benchmarkTemplate name
+    // Transform activities to include activity group and benchmark template names
     const transformedActivities = activities.map((activity: any) => ({
       ...activity,
-      activityGroupId: activity.activityGroupId._id || activity.activityGroupId, // Ensure we get the ID string
-      activityGroup: activity.activityGroupId, // Keep populated data for display
+      activityGroup: activity.activityGroupId.toString(), // Keep ID for backward compatibility
+      activityGroupName: activity.activityGroupId 
+        ? activityGroupMap.get(activity.activityGroupId.toString()) || 'Unknown'
+        : 'Unknown',
       benchmarkTemplateName: activity.benchmarkTemplateId 
         ? benchmarkTemplateMap.get(activity.benchmarkTemplateId.toString()) || null
         : null
@@ -156,10 +174,7 @@ export const getActivityById = async (req: AuthRequest, res: Response): Promise<
     const activity = await ActivityTemplate.findOne({
       _id: new Types.ObjectId(id),
       isActive: true
-    }).populate([
-      { path: 'gymId', select: 'name' },
-      { path: 'activityGroupId', select: 'name description' }
-    ]).lean();
+    }).populate('gymId', 'name').lean();
     
     if (!activity) {
       res.status(404).json({
@@ -183,22 +198,22 @@ export const getActivityById = async (req: AuthRequest, res: Response): Promise<
       }
     }
     
-    // Fetch benchmark template name if present
-    let benchmarkTemplateName = null;
-    if (activity.benchmarkTemplateId) {
-      const benchmarkTemplate = await BenchmarkTemplate.findOne({
-        _id: activity.benchmarkTemplateId,
-        isActive: true
-      }).select('name').lean();
-      benchmarkTemplateName = benchmarkTemplate?.name || null;
-    }
+    // Fetch activity group and benchmark template names
+    const [activityGroupData, benchmarkTemplateData] = await Promise.all([
+      activity.activityGroupId 
+        ? ActivityGroup.findOne({ _id: activity.activityGroupId, isActive: true }).select('name').lean()
+        : null,
+      activity.benchmarkTemplateId
+        ? BenchmarkTemplate.findOne({ _id: activity.benchmarkTemplateId, isActive: true }).select('name').lean()
+        : null
+    ]);
     
-    // Transform activity to include populated activityGroup and benchmarkTemplate name
+    // Transform activity to include activity group and benchmark template names
     const transformedActivity = {
       ...activity,
-      activityGroupId: (activity.activityGroupId as any)?._id || activity.activityGroupId, // Ensure we get the ID string
-      activityGroup: activity.activityGroupId, // Keep populated data for display
-      benchmarkTemplateName
+      activityGroup: activity.activityGroupId?.toString() || null, // Keep ID for backward compatibility
+      activityGroupName: activityGroupData?.name || 'Unknown',
+      benchmarkTemplateName: benchmarkTemplateData?.name || null
     };
 
     res.status(200).json({
@@ -363,28 +378,25 @@ export const createActivity = async (req: AuthRequest, res: Response): Promise<v
     const activity = new ActivityTemplate(activityData);
     await activity.save();
     
-    await activity.populate([
-      { path: 'gymId', select: 'name' },
-      { path: 'activityGroupId', select: 'name description' }
+    await activity.populate('gymId', 'name');
+    
+    // Fetch activity group and benchmark template names
+    const [activityGroupData, benchmarkTemplateData] = await Promise.all([
+      activity.activityGroupId 
+        ? ActivityGroup.findOne({ _id: activity.activityGroupId, isActive: true }).select('name').lean()
+        : null,
+      activity.benchmarkTemplateId
+        ? BenchmarkTemplate.findOne({ _id: activity.benchmarkTemplateId, isActive: true }).select('name').lean()
+        : null
     ]);
     
-    // Fetch benchmark template name if present
-    let benchmarkTemplateName = null;
-    if (activity.benchmarkTemplateId) {
-      const benchmarkTemplate = await BenchmarkTemplate.findOne({
-        _id: activity.benchmarkTemplateId,
-        isActive: true
-      }).select('name').lean();
-      benchmarkTemplateName = benchmarkTemplate?.name || null;
-    }
-    
-    // Transform activity to include populated activityGroup and benchmarkTemplate name
+    // Transform activity to include activity group and benchmark template names
     const activityJson = activity.toJSON();
     const transformedActivity = {
       ...activityJson,
-      activityGroupId: activityJson.activityGroupId._id || activityJson.activityGroupId, // Ensure we get the ID string
-      activityGroup: activityJson.activityGroupId, // Keep populated data for display
-      benchmarkTemplateName
+      activityGroup: activity.activityGroupId?.toString() || null, // Keep ID for backward compatibility
+      activityGroupName: activityGroupData?.name || 'Unknown',
+      benchmarkTemplateName: benchmarkTemplateData?.name || null
     };
 
     res.status(201).json({
@@ -569,28 +581,25 @@ export const updateActivity = async (req: AuthRequest, res: Response): Promise<v
       new Types.ObjectId(id),
       updateData,
       { new: true, runValidators: true }
-    ).populate([
-      { path: 'gymId', select: 'name' },
-      { path: 'activityGroupId', select: 'name description' }
+    ).populate('gymId', 'name');
+    
+    // Fetch activity group and benchmark template names
+    const [activityGroupData, benchmarkTemplateData] = await Promise.all([
+      updatedActivity!.activityGroupId 
+        ? ActivityGroup.findOne({ _id: updatedActivity!.activityGroupId, isActive: true }).select('name').lean()
+        : null,
+      updatedActivity!.benchmarkTemplateId
+        ? BenchmarkTemplate.findOne({ _id: updatedActivity!.benchmarkTemplateId, isActive: true }).select('name').lean()
+        : null
     ]);
     
-    // Fetch benchmark template name if present
-    let benchmarkTemplateName = null;
-    if (updatedActivity!.benchmarkTemplateId) {
-      const benchmarkTemplate = await BenchmarkTemplate.findOne({
-        _id: updatedActivity!.benchmarkTemplateId,
-        isActive: true
-      }).select('name').lean();
-      benchmarkTemplateName = benchmarkTemplate?.name || null;
-    }
-    
-    // Transform activity to include populated activityGroup and benchmarkTemplate name
+    // Transform activity to include activity group and benchmark template names
     const activityJson = updatedActivity!.toJSON();
     const transformedActivity = {
       ...activityJson,
-      activityGroupId: activityJson.activityGroupId._id || activityJson.activityGroupId, // Ensure we get the ID string
-      activityGroup: activityJson.activityGroupId, // Keep populated data for display
-      benchmarkTemplateName
+      activityGroup: updatedActivity!.activityGroupId?.toString() || null, // Keep ID for backward compatibility
+      activityGroupName: activityGroupData?.name || 'Unknown',
+      benchmarkTemplateName: benchmarkTemplateData?.name || null
     };
     
     res.status(200).json({
