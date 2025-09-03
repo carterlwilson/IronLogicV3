@@ -31,7 +31,6 @@ import {
 import { useDebouncedValue } from '@mantine/hooks';
 import { type ActivityTemplate, type ActivityGroup } from '../../types/activities';
 import { useAuth } from '../../lib/auth-context';
-import type { BenchmarkTemplate } from '../../types/benchmarks';
 
 interface ActivitiesTableProps {
   activities: ActivityTemplate[];
@@ -45,7 +44,6 @@ interface ActivitiesTableProps {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   } | null;
-  benchmarkTemplates?: BenchmarkTemplate[];
   onSearch: (filters: any) => void;
   onPageChange: (page: number) => void;
   onAddActivity: () => void;
@@ -59,7 +57,6 @@ export function ActivitiesTable({
   activityGroups,
   loading,
   pagination,
-  benchmarkTemplates,
   onSearch,
   onPageChange,
   onAddActivity,
@@ -74,7 +71,6 @@ export function ActivitiesTable({
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [benchmarkNameDictionary, setBenchmarkNameDictionary] = useState<Map<string,string>>(new Map<string,string>());
   
   // Debounce search term
   const [debouncedSearchTerm] = useDebouncedValue(searchTerm, 300);
@@ -96,14 +92,6 @@ export function ActivitiesTable({
     
     onSearch(filters);
   }, [debouncedSearchTerm, typeFilter, groupFilter, onSearch]);
-
-  useEffect(() => {
-    const namesDict = new Map<string, string>();
-    benchmarkTemplates?.forEach(template => {
-      namesDict.set(template._id, template.name);
-    });
-    setBenchmarkNameDictionary(namesDict);
-  }, [])
   
   // Clear all filters
   const clearFilters = () => {
@@ -275,15 +263,10 @@ export function ActivitiesTable({
                   </Table.Td>
                   
                   <Table.Td>
-                    {activity.benchmarkTemplateId ? (
-                      <div>
-                        <Text size="sm" fw={500} lineClamp={1}>
-                          {benchmarkNameDictionary.get(activity.benchmarkTemplateId)}
-                        </Text>
-                        <Badge size="xs" color="teal" variant="light">
-                          {activity.benchmarkTemplate.type} ({activity.benchmarkTemplate.unit})
-                        </Badge>
-                      </div>
+                    {activity.benchmarkTemplateName ? (
+                      <Text size="sm" fw={500} lineClamp={1}>
+                        {activity.benchmarkTemplateName}
+                      </Text>
                     ) : (
                       <Text size="sm" c="dimmed">
                         No benchmark
