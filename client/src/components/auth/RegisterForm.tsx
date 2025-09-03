@@ -14,7 +14,7 @@ import {
 import { useForm } from '@mantine/form';
 import { IconAlertCircle } from '@tabler/icons-react';
 import { useAuth } from '../../lib/auth-context';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 interface RegisterFormData {
   name: string;

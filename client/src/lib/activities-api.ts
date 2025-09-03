@@ -1,5 +1,5 @@
 import { api } from './api';
-import { ActivityTemplate, ActivityGroup } from '../../../shared/src/types';
+import type { ActivityTemplate, ActivityGroup } from '../types/activities';
 
 // API request/response interfaces
 export interface ActivitiesQueryParams {
@@ -14,8 +14,9 @@ export interface ActivitiesQueryParams {
 
 export interface CreateActivityData {
   name: string;
-  gymId?: string; // 'global' for global activities, specific gymId for gym activities
+  gymId?: string; // ID of the gym this activity belongs to
   activityGroupId: string; // ID of the activity group
+  benchmarkTemplateId?: string | null; // ID of the benchmark template for intensity calculations
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string | undefined;
   instructions?: string | undefined;
@@ -24,6 +25,7 @@ export interface CreateActivityData {
 export interface UpdateActivityData {
   name?: string;
   activityGroupId?: string; // ID of the activity group
+  benchmarkTemplateId?: string | null; // ID of the benchmark template for intensity calculations
   type?: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string | undefined;
   instructions?: string | undefined;
@@ -115,6 +117,3 @@ export const activitiesApi = {
     return response.data;
   }
 };
-
-// Export types for use in components
-export type { ActivityTemplate, ActivityGroup };

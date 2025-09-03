@@ -9,13 +9,11 @@ import {
   Button,
   Stack,
   Group,
-  Text,
-  Badge
+  Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { UpdateActivityData } from '../../lib/activities-api';
-import { ActivityTemplate, ActivityGroup } from '../../../shared/src/types';
-import { useAuth } from '../../lib/auth-context';
+import { type UpdateActivityData, type ActivityTemplate, type ActivityGroup } from '../../lib/activities-api';
+import type { BenchmarkTemplate } from '../../types/index';
 
 interface EditActivityModalProps {
   opened: boolean;
@@ -23,12 +21,14 @@ interface EditActivityModalProps {
   onSubmit: (id: string, activityData: UpdateActivityData) => Promise<boolean>;
   activity: ActivityTemplate | null;
   activityGroups: ActivityGroup[];
+  benchmarkTemplates?: BenchmarkTemplate[];
   loading: boolean;
 }
 
 interface FormData {
   name: string;
   activityGroupId: string;
+  benchmarkTemplateId: string;
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description: string;
   instructions: string;
@@ -41,14 +41,14 @@ export function EditActivityModal({
   onSubmit,
   activity,
   activityGroups,
+  benchmarkTemplates,
   loading
 }: EditActivityModalProps) {
-  const { user } = useAuth();
-  
   const form = useForm<FormData>({
     initialValues: {
       name: '',
       activityGroupId: '',
+      benchmarkTemplateId: '',
       type: 'primary lift',
       description: '',
       instructions: '',
@@ -60,7 +60,8 @@ export function EditActivityModal({
         return null;
       },
       activityGroupId: (value) => {
-        if (!value.trim()) return 'Activity group is required';
+        const stringValue = typeof value === 'string' ? value : String(value || '');
+        if (!stringValue.trim()) return 'Activity group is required';
         return null;
       },
       type: (value) => {
@@ -83,7 +84,8 @@ export function EditActivityModal({
     if (activity) {
       form.setValues({
         name: activity.name,
-        activityGroupId: activity.activityGroupId,
+        activityGroupId: String(activity.activityGroupId || ''),
+        benchmarkTemplateId: String(activity.benchmarkTemplateId || ''),
         type: activity.type,
         description: activity.description || '',
         instructions: activity.instructions || '',
@@ -99,6 +101,7 @@ export function EditActivityModal({
     const activityData: UpdateActivityData = {
       name: values.name.trim(),
       activityGroupId: values.activityGroupId,
+      benchmarkTemplateId: values.benchmarkTemplateId || null,
       type: values.type,
       description: values.description.trim() || undefined,
       instructions: values.instructions.trim() || undefined,
@@ -129,17 +132,6 @@ export function EditActivityModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          {/* Activity Scope Indicator */}
-          <Group gap="xs">
-            <Text size="sm" c="dimmed">Scope:</Text>
-            <Badge
-              size="sm"
-              color={activity.gymId ? 'blue' : 'purple'}
-              variant="light"
-            >
-              {activity.gymId ? 'Gym Activity' : 'Global Activity'}
-            </Badge>
-          </Group>
           
           {/* Basic Information */}
           <TextInput
@@ -161,7 +153,7 @@ export function EditActivityModal({
             required
             disabled={false}
             {...form.getInputProps('activityGroupId')}
-            description={canEdit() ? (activityGroups.length > 0 ? "Select an existing activity group" : "No activity groups available") : "Activity group"}
+            description={activityGroups.length > 0 ? "Select an existing activity group" : "No activity groups available"}
           />
           
           {activityGroups.length === 0 && (
@@ -183,6 +175,19 @@ export function EditActivityModal({
             required
             disabled={false}
             {...form.getInputProps('type')}
+          />
+          
+          {/* Benchmark Template */}
+          <Select
+            label="Benchmark Template (Optional)"
+            placeholder="Select benchmark template for intensity calculations"
+            data={benchmarkTemplates?.map(template => ({
+              value: template._id.toString(),
+              label: `${template.name} (${template.type} - ${template.unit})`
+            })) || []}
+            {...form.getInputProps('benchmarkTemplateId')}
+            description="Used for calculating intensity percentages in workout programs"
+            clearable
           />
           
           {/* Description */}

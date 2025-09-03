@@ -29,8 +29,9 @@ import {
   IconX
 } from '@tabler/icons-react';
 import { useDebouncedValue } from '@mantine/hooks';
-import { ActivityTemplate, ActivityGroup } from '../../lib/activities-api';
+import { type ActivityTemplate, type ActivityGroup } from '../../types/activities';
 import { useAuth } from '../../lib/auth-context';
+import type { BenchmarkTemplate } from '../../types/benchmarks';
 
 interface ActivitiesTableProps {
   activities: ActivityTemplate[];
@@ -44,6 +45,7 @@ interface ActivitiesTableProps {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   } | null;
+  benchmarkTemplates?: BenchmarkTemplate[];
   onSearch: (filters: any) => void;
   onPageChange: (page: number) => void;
   onAddActivity: () => void;
@@ -57,6 +59,7 @@ export function ActivitiesTable({
   activityGroups,
   loading,
   pagination,
+  benchmarkTemplates,
   onSearch,
   onPageChange,
   onAddActivity,
@@ -71,6 +74,7 @@ export function ActivitiesTable({
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [benchmarkNameDictionary, setBenchmarkNameDictionary] = useState<Map<string,string>>(new Map<string,string>());
   
   // Debounce search term
   const [debouncedSearchTerm] = useDebouncedValue(searchTerm, 300);
@@ -92,6 +96,14 @@ export function ActivitiesTable({
     
     onSearch(filters);
   }, [debouncedSearchTerm, typeFilter, groupFilter, onSearch]);
+
+  useEffect(() => {
+    const namesDict = new Map<string, string>();
+    benchmarkTemplates?.forEach(template => {
+      namesDict.set(template._id, template.name);
+    });
+    setBenchmarkNameDictionary(namesDict);
+  }, [])
   
   // Clear all filters
   const clearFilters = () => {
@@ -230,13 +242,13 @@ export function ActivitiesTable({
                 <Table.Th>Activity</Table.Th>
                 <Table.Th>Type</Table.Th>
                 <Table.Th>Group</Table.Th>
-                <Table.Th>Scope</Table.Th>
+                <Table.Th>Benchmark</Table.Th>
                 {canPerformActions && <Table.Th w={60}>Actions</Table.Th>}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {activities.map((activity) => (
-                <Table.Tr key={activity._id}>
+              {activities.map((activity, index) => (
+                <Table.Tr key={activity._id || `activity-${index}`}>
                   <Table.Td>
                     <div>
                       <Text fw={500} lineClamp={1}>{activity.name}</Text>
@@ -262,15 +274,21 @@ export function ActivitiesTable({
                     <Text size="sm">{activity.activityGroup?.name || 'Unknown'}</Text>
                   </Table.Td>
                   
-                  
                   <Table.Td>
-                    <Badge
-                      size="sm"
-                      color={activity.gymId ? 'blue' : 'purple'}
-                      variant="light"
-                    >
-                      {activity.gymId ? 'Gym' : 'Global'}
-                    </Badge>
+                    {activity.benchmarkTemplateId ? (
+                      <div>
+                        <Text size="sm" fw={500} lineClamp={1}>
+                          {benchmarkNameDictionary.get(activity.benchmarkTemplateId)}
+                        </Text>
+                        <Badge size="xs" color="teal" variant="light">
+                          {activity.benchmarkTemplate.type} ({activity.benchmarkTemplate.unit})
+                        </Badge>
+                      </div>
+                    ) : (
+                      <Text size="sm" c="dimmed">
+                        No benchmark
+                      </Text>
+                    )}
                   </Table.Td>
                   
                   {canPerformActions && (

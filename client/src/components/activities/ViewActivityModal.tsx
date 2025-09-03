@@ -11,8 +11,7 @@ import {
   Card
 } from '@mantine/core';
 import { IconCalendar, IconUser, IconEdit } from '@tabler/icons-react';
-import { ActivityTemplate } from '../../lib/activities-api';
-import { useAuth } from '../../lib/auth-context';
+import { type ActivityTemplate } from '../../lib/activities-api';
 
 interface ViewActivityModalProps {
   opened: boolean;
@@ -27,10 +26,6 @@ export function ViewActivityModal({
   onEdit,
   activity
 }: ViewActivityModalProps) {
-  const { user } = useAuth();
-
-  // If user can access this page, they can edit activities
-
   const handleEdit = () => {
     if (activity && onEdit) {
       onEdit(activity);
@@ -72,13 +67,6 @@ export function ViewActivityModal({
               >
                 {activity.type}
               </Badge>
-              <Badge
-                size="md"
-                color={activity.gymId ? 'blue' : 'purple'}
-                variant="light"
-              >
-                {activity.gymId ? 'Gym Activity' : 'Global Activity'}
-              </Badge>
             </Group>
           </div>
           
@@ -108,6 +96,21 @@ export function ViewActivityModal({
               )}
             </div>
           </Group>
+
+          {activity.benchmarkTemplate && (
+            <div>
+              <Text size="sm" c="dimmed" mb="xs">Benchmark Template</Text>
+              <Group gap="xs">
+                <Text fw={500}>{activity.benchmarkTemplate.name}</Text>
+                <Badge size="xs" color="teal" variant="light">
+                  {activity.benchmarkTemplate.type} ({activity.benchmarkTemplate.unit})
+                </Badge>
+              </Group>
+              <Text size="xs" c="dimmed" mt="xs">
+                Used for calculating intensity percentages in workout programs
+              </Text>
+            </div>
+          )}
 
           {activity.description && (
             <div>

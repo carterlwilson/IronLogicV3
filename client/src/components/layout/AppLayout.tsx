@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import {
   AppShell,
   Burger,
@@ -30,7 +30,7 @@ import {
   IconActivity,
 } from '@tabler/icons-react';
 import { useAuth } from '../../lib/auth-context';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -78,6 +78,11 @@ const getNavigationItems = (userType: string): NavigationItem[] => {
           href: '/activity-groups',
         },
         {
+          icon: <IconTrophy size="1.1rem" />,
+          label: 'Benchmark Templates',
+          href: '/benchmark-templates',
+        },
+        {
           icon: <IconBarbell size="1.1rem" />,
           label: 'Programs',
           href: '/programs',
@@ -123,6 +128,11 @@ const getNavigationItems = (userType: string): NavigationItem[] => {
           href: '/activity-groups',
         },
         {
+          icon: <IconTrophy size="1.1rem" />,
+          label: 'Benchmark Templates',
+          href: '/benchmark-templates',
+        },
+        {
           icon: <IconBarbell size="1.1rem" />,
           label: 'Programs',
           href: '/programs',
@@ -156,6 +166,11 @@ const getNavigationItems = (userType: string): NavigationItem[] => {
           icon: <IconBarbell size="1.1rem" />,
           label: 'Activity Groups',
           href: '/activity-groups',
+        },
+        {
+          icon: <IconTrophy size="1.1rem" />,
+          label: 'Benchmark Templates',
+          href: '/benchmark-templates',
         },
         {
           icon: <IconBarbell size="1.1rem" />,
@@ -217,7 +232,7 @@ const getUserTypeDisplay = (userType: string): { label: string; color: string } 
 export function AppLayout({ children }: AppLayoutProps) {
   const [opened, { toggle, close }] = useDisclosure();
   const { user, logout, isLoading } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -232,11 +247,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/auth/login');
+    navigate('/auth/login');
   };
 
   const handleNavigation = (href: string) => {
-    router.push(href);
+    navigate(href);
     close();
   };
 
@@ -272,9 +287,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Avatar>
               } rightSection={<IconChevronDown size="1rem" />}>
                 <div style={{ textAlign: 'left' }}>
-                  <Text size="sm" fw={500}>
+                  <div style={{ fontSize: '14px', fontWeight: 500 }}>
                     {user.name}
-                  </Text>
+                  </div>
                   <Badge size="xs" color={userDisplay.color} variant="light">
                     {userDisplay.label}
                   </Badge>
@@ -285,13 +300,13 @@ export function AppLayout({ children }: AppLayoutProps) {
             <Menu.Dropdown>
               <Menu.Item
                 leftSection={<IconUser size="1rem" />}
-                onClick={() => router.push('/profile')}
+                onClick={() => navigate('/profile')}
               >
                 Profile
               </Menu.Item>
               <Menu.Item
                 leftSection={<IconSettings size="1rem" />}
-                onClick={() => router.push('/settings')}
+                onClick={() => navigate('/settings')}
               >
                 Settings
               </Menu.Item>
@@ -339,12 +354,12 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           <Divider my="md" />
 
-          <Text size="xs" c="dimmed" ta="center">
-            Logged in as{' '}
+          <div style={{ textAlign: 'center', fontSize: '11px', color: 'var(--mantine-color-dimmed)' }}>
+            <span>Logged in as </span>
             <Badge size="xs" color={userDisplay.color} variant="light">
               {userDisplay.label}
             </Badge>
-          </Text>
+          </div>
         </AppShell.Section>
       </AppShell.Navbar>
 

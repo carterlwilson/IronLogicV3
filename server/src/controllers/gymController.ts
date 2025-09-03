@@ -138,9 +138,16 @@ export const getGym = async (req: AuthRequest, res: Response): Promise<void> => 
       gym.locations = gym.locations.filter(location => location.isActive);
     }
 
+    // Transform to ensure proper ID format
+    const transformedGym = {
+      ...gym,
+      ownerId: (gym.ownerId as any)?._id || gym.ownerId, // Ensure ID is string
+      owner: gym.ownerId // Keep populated data for display
+    };
+
     res.json({
       success: true,
-      data: { gym }
+      data: { gym: transformedGym }
     });
 
   } catch (error) {
@@ -260,9 +267,16 @@ export const createGym = async (req: AuthRequest, res: Response): Promise<void> 
       .populate('ownerId', 'name email phone')
       .lean();
 
+    // Transform to ensure proper ID format
+    const transformedGym = {
+      ...savedGym!,
+      ownerId: (savedGym!.ownerId as any)?._id || savedGym!.ownerId, // Ensure ID is string
+      owner: savedGym!.ownerId // Keep populated data for display
+    };
+
     res.status(201).json({
       success: true,
-      data: { gym: savedGym },
+      data: { gym: transformedGym },
       message: 'Gym created successfully'
     });
 
@@ -391,9 +405,16 @@ export const updateGym = async (req: AuthRequest, res: Response): Promise<void> 
     ).populate('ownerId', 'name email phone')
      .lean();
 
+    // Transform to ensure proper ID format
+    const transformedGym = {
+      ...updatedGym!,
+      ownerId: (updatedGym!.ownerId as any)?._id || updatedGym!.ownerId, // Ensure ID is string
+      owner: updatedGym!.ownerId // Keep populated data for display
+    };
+
     res.json({
       success: true,
-      data: { gym: updatedGym },
+      data: { gym: transformedGym },
       message: 'Gym updated successfully'
     });
 

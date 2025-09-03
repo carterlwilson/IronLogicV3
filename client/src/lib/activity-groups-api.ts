@@ -1,5 +1,5 @@
 import { api } from './api';
-import { ActivityGroup } from '../../../shared/src/types';
+import type { ActivityGroup } from '../types/index';
 
 // API request/response interfaces
 export interface CreateActivityGroupData {

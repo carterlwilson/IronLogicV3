@@ -12,7 +12,7 @@ import {
   Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { ActivityGroup, UpdateActivityGroupData } from '../../lib/activity-groups-api';
+import { type ActivityGroup, type UpdateActivityGroupData } from '../../lib/activity-groups-api';
 import { useAuth } from '../../lib/auth-context';
 
 interface EditActivityGroupModalProps {
@@ -99,17 +99,6 @@ export function EditActivityGroupModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          {/* Activity Group Scope Indicator */}
-          <Group gap="xs">
-            <Text size="sm" c="dimmed">Scope:</Text>
-            <Badge
-              size="sm"
-              color={activityGroup.gymId ? 'blue' : 'purple'}
-              variant="light"
-            >
-              {activityGroup.gymId ? 'Gym Activity Group' : 'Global Activity Group'}
-            </Badge>
-          </Group>
           
           {activityGroup.count > 0 && (
             <Group gap="xs">

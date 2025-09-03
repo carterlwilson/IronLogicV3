@@ -105,6 +105,14 @@ const createIndexes = async () => {
       isActive: 1 
     });
     
+    // Benchmark templates by gym and filters
+    await db.collection('benchmarktemplates').createIndex({ 
+      gymId: 1, 
+      isActive: 1, 
+      type: 1, 
+      tags: 1 
+    });
+    
     // Workout programs by gym and status
     await db.collection('workoutprograms').createIndex({ 
       gymId: 1, 

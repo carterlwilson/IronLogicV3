@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Types } from 'mongoose';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { ActivityGroup } from '../models/ActivityGroup';
 import ActivityTemplate from '../models/ActivityTemplate';
@@ -76,8 +77,7 @@ router.get('/:id', async (req: AuthRequest, res): Promise<void> => {
 
     // Check if user can access this activity group
     const canAccess = user.userType === 'admin' || 
-                     !activityGroup.gymId || 
-                     (user.gymId && user.gymId === activityGroup.gymId.toString());
+                     (user.gymId && user.gymId === activityGroup.gymId?.toString());
 
     if (!canAccess) {
       res.status(403).json({
@@ -117,22 +117,37 @@ router.post('/', async (req: AuthRequest, res): Promise<void> => {
     const user = req.user!;
     const { name, gymId, description } = req.body;
 
-    // Determine the scope
-    let finalGymId = null;
+    // Always assign to a gym - no global groups
+    let finalGymId: Types.ObjectId;
     if (user.userType === 'admin') {
-      // Admin can create global or gym-specific groups
-      finalGymId = gymId || null;
+      // Admin can create groups for any gym
+      if (gymId) {
+        finalGymId = new Types.ObjectId(gymId);
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Gym ID is required'
+        });
+        return;
+      }
     } else {
-      // Non-admin users can only create groups for their gym
-      finalGymId = user.gymId;
+      // Non-admin users create groups for their gym
+      if (!user.gymId) {
+        res.status(400).json({
+          success: false,
+          message: 'User must be assigned to a gym'
+        });
+        return;
+      }
+      finalGymId = new Types.ObjectId(user.gymId);
     }
 
-    // Check if group with this name already exists in the same scope
-    const existingGroup = await ActivityGroup.findByName(name, finalGymId);
+    // Check if group with this name already exists in this gym
+    const existingGroup = await ActivityGroup.findByName(name, finalGymId.toString());
     if (existingGroup) {
       res.status(400).json({
         success: false,
-        message: `Activity group "${name}" already exists in this scope`
+        message: `Activity group "${name}" already exists in this gym`
       });
       return;
     }
@@ -183,10 +198,8 @@ router.put('/:id', async (req: AuthRequest, res): Promise<void> => {
     }
 
     // Check if user can edit this activity group
-    // Same logic as read access: admin can edit anything, non-admins can edit global groups or their own gym's groups
     const canEdit = user.userType === 'admin' || 
-                   !activityGroup.gymId || 
-                   (user.gymId && user.gymId === activityGroup.gymId.toString());
+                   (user.gymId && user.gymId === activityGroup.gymId?.toString());
     
     // Additional restriction: only admin, gym_owner, and coach can edit (clients cannot)
     const hasEditRole = user.userType === 'admin' || user.userType === 'gym_owner' || user.userType === 'coach';
@@ -259,10 +272,8 @@ router.delete('/:id', async (req: AuthRequest, res): Promise<void> => {
     }
 
     // Check if user can delete this activity group
-    // Same logic as read access: admin can delete anything, non-admins can delete global groups or their own gym's groups
     const canDelete = user.userType === 'admin' || 
-                     !activityGroup.gymId || 
-                     (user.gymId && user.gymId === activityGroup.gymId.toString());
+                     (user.gymId && user.gymId === activityGroup.gymId?.toString());
     
     // Additional restriction: only admin, gym_owner, and coach can delete (clients cannot)
     const hasDeleteRole = user.userType === 'admin' || user.userType === 'gym_owner' || user.userType === 'coach';

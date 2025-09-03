@@ -69,6 +69,8 @@ export interface ActivityTemplate {
   gymId?: string | null; // null for global activities
   activityGroupId: string;
   activityGroup?: ActivityGroup; // Populated when needed
+  benchmarkTemplateId?: string | null; // reference to BenchmarkTemplate for intensity calculations
+  benchmarkTemplate?: BenchmarkTemplate; // Populated when needed
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string | undefined;
   instructions?: string | undefined;
@@ -171,13 +173,10 @@ export interface WorkoutProgram {
   description: string;
   blocks: ProgramBlock[];
   durationWeeks: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  tags: string[];
   isActive: boolean;
   isTemplate: boolean;
   createdAt: Date;
   updatedAt: Date;
-  createdBy: ObjectId;
   version: number;
   parentProgramId?: ObjectId;
 }
@@ -210,14 +209,14 @@ export interface ProgramActivity {
   activityId: ObjectId;
   templateId: ObjectId;
   orderIndex: number;
-  sets: number;
-  reps: number;
-  restPeriod: number;
-  intensityPercentage: number;
+  sets?: number;
+  reps?: number;
+  restPeriod?: number;
+  intensityPercentage?: number;
   notes?: string;
   duration?: number;
   distance?: number;
-  type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
+  type: 'strength' | 'conditioning' | 'diagnostic';
 }
 
 export interface VolumeTarget {

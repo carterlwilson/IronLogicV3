@@ -39,7 +39,7 @@ import {
 } from '@tabler/icons-react';
 import { useAuth } from '../../lib/auth-context';
 import { useGyms } from '../../hooks/useGyms';
-import { Gym } from '../../lib/gyms-api';
+import type { Gym } from '../../lib/gyms-api';
 
 interface GymsTableProps {
   onAddGym: () => void;

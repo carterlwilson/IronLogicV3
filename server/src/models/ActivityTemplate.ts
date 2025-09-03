@@ -5,6 +5,7 @@ export interface IActivityTemplate extends Document {
   name: string;
   gymId?: Types.ObjectId; // null for global activities
   activityGroupId: Types.ObjectId;
+  benchmarkTemplateId?: Types.ObjectId; // reference to BenchmarkTemplate for intensity calculations
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string;
   instructions?: string;
@@ -29,6 +30,11 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
     type: Schema.Types.ObjectId,
     ref: 'ActivityGroup',
     required: [true, 'Activity group is required']
+  },
+  benchmarkTemplateId: {
+    type: Schema.Types.ObjectId,
+    ref: 'BenchmarkTemplate',
+    default: null // Optional - only for strength activities that need benchmark references
   },
   type: { 
     type: String, 
@@ -67,6 +73,7 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
 activityTemplateSchema.index({ gymId: 1, isActive: 1 });
 activityTemplateSchema.index({ type: 1, gymId: 1 });
 activityTemplateSchema.index({ activityGroup: 1, gymId: 1 });
+activityTemplateSchema.index({ benchmarkTemplateId: 1 });
 activityTemplateSchema.index({ name: 'text', description: 'text', instructions: 'text' });
 
 // Compound index for common query patterns

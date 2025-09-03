@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Modal,
   TextInput,
@@ -9,12 +9,12 @@ import {
   Button,
   Stack,
   Group,
-  Switch,
   Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { CreateActivityData } from '../../lib/activities-api';
-import { ActivityGroup } from '../../lib/activity-groups-api';
+import { type CreateActivityData } from '../../lib/activities-api';
+import { type ActivityGroup } from '../../lib/activity-groups-api';
+import type { BenchmarkTemplate } from '../../types/index';
 import { useAuth } from '../../lib/auth-context';
 
 interface AddActivityModalProps {
@@ -22,6 +22,7 @@ interface AddActivityModalProps {
   onClose: () => void;
   onSubmit: (activityData: CreateActivityData) => Promise<boolean>;
   activityGroups: ActivityGroup[];
+  benchmarkTemplates?: BenchmarkTemplate[];
   gymOptions?: Array<{ value: string; label: string }>;
   loading: boolean;
 }
@@ -30,6 +31,7 @@ interface FormData {
   name: string;
   gymId: string;
   activityGroupId: string;
+  benchmarkTemplateId: string;
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description: string;
   instructions: string;
@@ -41,17 +43,18 @@ export function AddActivityModal({
   onClose,
   onSubmit,
   activityGroups,
+  benchmarkTemplates,
   gymOptions,
   loading
 }: AddActivityModalProps) {
   const { user } = useAuth();
-  const [isGlobal, setIsGlobal] = useState(false);
   
   const form = useForm<FormData>({
     initialValues: {
       name: '',
-      gymId: user?.userType === 'admin' ? 'global' : (user?.gymId || ''),
+      gymId: user?.gymId || '',
       activityGroupId: '',
+      benchmarkTemplateId: '',
       type: 'primary lift',
       description: '',
       instructions: '',
@@ -81,16 +84,6 @@ export function AddActivityModal({
     }
   });
   
-  // Update gymId when global toggle changes
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      if (isGlobal) {
-        form.setFieldValue('gymId', 'global');
-      } else if (gymOptions && gymOptions.length > 0) {
-        form.setFieldValue('gymId', gymOptions[0]?.value || '');
-      }
-    }
-  }, [isGlobal, gymOptions, user?.userType]);
   
   
   const handleSubmit = async (values: FormData) => {
@@ -98,32 +91,29 @@ export function AddActivityModal({
     const activityData: CreateActivityData = {
       name: values.name.trim(),
       activityGroupId: values.activityGroupId,
+      benchmarkTemplateId: values.benchmarkTemplateId || null,
       type: values.type,
       description: values.description.trim() || undefined,
       instructions: values.instructions.trim() || undefined,
     };
 
-    // Only add gymId if it's not global
-    if (values.gymId && values.gymId !== 'global') {
+    // Always include gymId for gym-scoped activities
+    if (values.gymId) {
       activityData.gymId = values.gymId;
     }
     
     const success = await onSubmit(activityData);
     if (success) {
       form.reset();
-      setIsGlobal(false);
       onClose();
     }
   };
   
   const handleClose = () => {
     form.reset();
-    setIsGlobal(false);
     onClose();
   };
   
-  // Check if user can create global activities
-  const canCreateGlobal = user?.userType === 'admin';
   
   return (
     <Modal
@@ -143,26 +133,15 @@ export function AddActivityModal({
             {...form.getInputProps('name')}
           />
           
-          {/* Scope Selection */}
-          {canCreateGlobal && (
-            <Stack gap="xs">
-              <Switch
-                label="Global Activity"
-                description="Global activities are available to all gyms"
-                checked={isGlobal}
-                onChange={(event) => setIsGlobal(event.currentTarget.checked)}
-              />
-              
-              {!isGlobal && (
-                <Select
-                  label="Gym"
-                  placeholder="Select gym"
-                  data={gymOptions || []}
-                  {...form.getInputProps('gymId')}
-                  required
-                />
-              )}
-            </Stack>
+          {/* Gym Selection for Admins */}
+          {user?.userType === 'admin' && (
+            <Select
+              label="Gym"
+              placeholder="Select gym to create activity for"
+              data={gymOptions || []}
+              {...form.getInputProps('gymId')}
+              required
+            />
           )}
           
           {/* Activity Group */}
@@ -196,6 +175,19 @@ export function AddActivityModal({
             ]}
             required
             {...form.getInputProps('type')}
+          />
+          
+          {/* Benchmark Template */}
+          <Select
+            label="Benchmark Template (Optional)"
+            placeholder="Select benchmark template for intensity calculations"
+            data={benchmarkTemplates?.map(template => ({
+              value: template._id.toString(),
+              label: `${template.name} (${template.type} - ${template.unit})`
+            })) || []}
+            {...form.getInputProps('benchmarkTemplateId')}
+            description="Used for calculating intensity percentages in workout programs"
+            clearable
           />
           
           {/* Description */}

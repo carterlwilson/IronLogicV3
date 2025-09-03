@@ -1,6 +1,7 @@
 import axios from 'axios';
+import type { User } from '../types/index';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -86,16 +87,6 @@ export interface AuthResponse {
   errors?: string[];
 }
 
-export interface User {
-  _id: string;
-  email: string;
-  name: string;
-  userType: 'admin' | 'gym_owner' | 'coach' | 'client';
-  gymId?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export const authApi = {
   login: (data: LoginData) => 
