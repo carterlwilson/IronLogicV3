@@ -1,0 +1,15 @@
+client/src/app/activities/page.tsx
+client/src/app/activity-groups/page.tsx
+client/src/app/auth/forgot-password/page.tsx
+client/src/app/auth/login/page.tsx
+client/src/app/auth/register/page.tsx
+client/src/app/auth/reset-password/page.tsx
+client/src/app/benchmark-templates/page.tsx
+client/src/app/dashboard/page.tsx
+client/src/app/gyms/page.tsx
+client/src/app/mobile/page.tsx
+client/src/app/page.tsx
+client/src/app/programs/builder/page.tsx
+client/src/app/programs/page.tsx
+client/src/app/settings/page.tsx
+client/src/app/users/page.tsx
