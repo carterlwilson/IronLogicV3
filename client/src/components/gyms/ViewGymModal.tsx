@@ -32,7 +32,7 @@ import {
   IconLocation,
   IconShield
 } from '@tabler/icons-react';
-import { Gym } from '../../lib/gyms-api';
+import type { Gym } from '../../lib/gyms-api';
 import { useAuth } from '../../lib/auth-context';
 
 interface ViewGymModalProps {

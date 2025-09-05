@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
   Modal,
   TextInput,
@@ -9,12 +8,12 @@ import {
   Button,
   Stack,
   Group,
-  Switch,
   Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { CreateActivityData } from '../../lib/activities-api';
-import { ActivityGroup } from '../../lib/activity-groups-api';
+import { type CreateActivityData } from '../../lib/activities-api';
+import { type ActivityGroup } from '../../lib/activity-groups-api';
+import type { BenchmarkTemplate } from '../../types/benchmarks';
 import { useAuth } from '../../lib/auth-context';
 
 interface AddActivityModalProps {
@@ -22,6 +21,7 @@ interface AddActivityModalProps {
   onClose: () => void;
   onSubmit: (activityData: CreateActivityData) => Promise<boolean>;
   activityGroups: ActivityGroup[];
+  benchmarkTemplates?: BenchmarkTemplate[];
   gymOptions?: Array<{ value: string; label: string }>;
   loading: boolean;
 }
@@ -30,9 +30,10 @@ interface FormData {
   name: string;
   gymId: string;
   activityGroupId: string;
+  benchmarkTemplateId: string;
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description: string;
-  instructions: string;
+  notes: string;
 }
 
 
@@ -41,20 +42,21 @@ export function AddActivityModal({
   onClose,
   onSubmit,
   activityGroups,
+  benchmarkTemplates,
   gymOptions,
   loading
 }: AddActivityModalProps) {
   const { user } = useAuth();
-  const [isGlobal, setIsGlobal] = useState(false);
   
   const form = useForm<FormData>({
     initialValues: {
       name: '',
-      gymId: user?.userType === 'admin' ? 'global' : (user?.gymId || ''),
+      gymId: user?.gymId || '',
       activityGroupId: '',
+      benchmarkTemplateId: '',
       type: 'primary lift',
       description: '',
-      instructions: '',
+      notes: '',
     },
     validate: {
       name: (value) => {
@@ -63,7 +65,7 @@ export function AddActivityModal({
         return null;
       },
       activityGroupId: (value) => {
-        if (!value.trim()) return 'Activity group is required';
+        // Activity group is optional
         return null;
       },
       type: (value) => {
@@ -74,56 +76,43 @@ export function AddActivityModal({
         if (value && value.length > 500) return 'Description cannot exceed 500 characters';
         return null;
       },
-      instructions: (value) => {
-        if (value && value.length > 1000) return 'Instructions cannot exceed 1000 characters';
+      notes: (value) => {
+        if (value && value.length > 1000) return 'Notes cannot exceed 1000 characters';
         return null;
       }
     }
   });
   
-  // Update gymId when global toggle changes
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      if (isGlobal) {
-        form.setFieldValue('gymId', 'global');
-      } else if (gymOptions && gymOptions.length > 0) {
-        form.setFieldValue('gymId', gymOptions[0]?.value || '');
-      }
-    }
-  }, [isGlobal, gymOptions, user?.userType]);
   
   
   const handleSubmit = async (values: FormData) => {
     // Convert form data to API format
     const activityData: CreateActivityData = {
       name: values.name.trim(),
-      activityGroupId: values.activityGroupId,
+      activityGroupId: values.activityGroupId || null,
+      benchmarkTemplateId: values.benchmarkTemplateId || null,
       type: values.type,
       description: values.description.trim() || undefined,
-      instructions: values.instructions.trim() || undefined,
+      notes: values.notes.trim() || undefined,
     };
 
-    // Only add gymId if it's not global
-    if (values.gymId && values.gymId !== 'global') {
+    // Always include gymId for gym-scoped activities
+    if (values.gymId) {
       activityData.gymId = values.gymId;
     }
     
     const success = await onSubmit(activityData);
     if (success) {
       form.reset();
-      setIsGlobal(false);
       onClose();
     }
   };
   
   const handleClose = () => {
     form.reset();
-    setIsGlobal(false);
     onClose();
   };
   
-  // Check if user can create global activities
-  const canCreateGlobal = user?.userType === 'admin';
   
   return (
     <Modal
@@ -143,44 +132,33 @@ export function AddActivityModal({
             {...form.getInputProps('name')}
           />
           
-          {/* Scope Selection */}
-          {canCreateGlobal && (
-            <Stack gap="xs">
-              <Switch
-                label="Global Activity"
-                description="Global activities are available to all gyms"
-                checked={isGlobal}
-                onChange={(event) => setIsGlobal(event.currentTarget.checked)}
-              />
-              
-              {!isGlobal && (
-                <Select
-                  label="Gym"
-                  placeholder="Select gym"
-                  data={gymOptions || []}
-                  {...form.getInputProps('gymId')}
-                  required
-                />
-              )}
-            </Stack>
+          {/* Gym Selection for Admins */}
+          {user?.userType === 'admin' && (
+            <Select
+              label="Gym"
+              placeholder="Select gym to create activity for"
+              data={gymOptions || []}
+              {...form.getInputProps('gymId')}
+              required
+            />
           )}
           
           {/* Activity Group */}
           <Select
-            label="Activity Group"
+            label="Activity Group (Optional)"
             placeholder="Select an activity group"
             data={activityGroups.map(group => ({
               value: group._id,
               label: `${group.name} (${group.count} activities)`
             }))}
-            required
             {...form.getInputProps('activityGroupId')}
-            description={activityGroups.length > 0 ? "Select an existing activity group" : "No activity groups available. Create one first."}
+            description="Select an existing activity group or leave blank to create without a group"
+            clearable
           />
           
           {activityGroups.length === 0 && (
-            <Text size="xs" c="orange">
-              You need to create activity groups first before adding activities.
+            <Text size="xs" c="dimmed">
+              No activity groups available. You can create the activity without a group or create activity groups first.
             </Text>
           )}
           
@@ -198,6 +176,19 @@ export function AddActivityModal({
             {...form.getInputProps('type')}
           />
           
+          {/* Benchmark Template */}
+          <Select
+            label="Benchmark Template (Optional)"
+            placeholder="Select benchmark template for intensity calculations"
+            data={benchmarkTemplates?.map(template => ({
+              value: template._id.toString(),
+              label: `${template.name} (${template.type} - ${template.unit})`
+            })) || []}
+            {...form.getInputProps('benchmarkTemplateId')}
+            description="Used for calculating intensity percentages in workout programs"
+            clearable
+          />
+          
           {/* Description */}
           <Textarea
             label="Description"
@@ -206,12 +197,12 @@ export function AddActivityModal({
             {...form.getInputProps('description')}
           />
           
-          {/* Instructions */}
+          {/* Notes */}
           <Textarea
-            label="Instructions"
-            placeholder="Detailed instructions for performing the activity..."
+            label="Notes"
+            placeholder="Additional notes about the activity..."
             rows={4}
-            {...form.getInputProps('instructions')}
+            {...form.getInputProps('notes')}
           />
           
           

@@ -9,13 +9,12 @@ import {
   Button,
   Stack,
   Group,
-  Text,
-  Badge
+  Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { UpdateActivityData } from '../../lib/activities-api';
-import { ActivityTemplate, ActivityGroup } from '../../../shared/src/types';
-import { useAuth } from '../../lib/auth-context';
+import { type UpdateActivityData } from '../../lib/activities-api';
+import { type ActivityTemplate, type ActivityGroup } from '../../types/activities'
+import type { BenchmarkTemplate } from '../../types/benchmarks';
 
 interface EditActivityModalProps {
   opened: boolean;
@@ -23,15 +22,17 @@ interface EditActivityModalProps {
   onSubmit: (id: string, activityData: UpdateActivityData) => Promise<boolean>;
   activity: ActivityTemplate | null;
   activityGroups: ActivityGroup[];
+  benchmarkTemplates?: BenchmarkTemplate[];
   loading: boolean;
 }
 
 interface FormData {
   name: string;
   activityGroupId: string;
+  benchmarkTemplateId: string;
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description: string;
-  instructions: string;
+  notes: string;
 }
 
 
@@ -41,17 +42,17 @@ export function EditActivityModal({
   onSubmit,
   activity,
   activityGroups,
+  benchmarkTemplates,
   loading
 }: EditActivityModalProps) {
-  const { user } = useAuth();
-  
   const form = useForm<FormData>({
     initialValues: {
       name: '',
       activityGroupId: '',
+      benchmarkTemplateId: '',
       type: 'primary lift',
       description: '',
-      instructions: '',
+      notes: '',
     },
     validate: {
       name: (value) => {
@@ -60,7 +61,8 @@ export function EditActivityModal({
         return null;
       },
       activityGroupId: (value) => {
-        if (!value.trim()) return 'Activity group is required';
+        const stringValue = typeof value === 'string' ? value : String(value || '');
+        if (!stringValue.trim()) return 'Activity group is required';
         return null;
       },
       type: (value) => {
@@ -71,8 +73,8 @@ export function EditActivityModal({
         if (value && value.length > 500) return 'Description cannot exceed 500 characters';
         return null;
       },
-      instructions: (value) => {
-        if (value && value.length > 1000) return 'Instructions cannot exceed 1000 characters';
+      notes: (value) => {
+        if (value && value.length > 1000) return 'Notes cannot exceed 1000 characters';
         return null;
       }
     }
@@ -83,10 +85,11 @@ export function EditActivityModal({
     if (activity) {
       form.setValues({
         name: activity.name,
-        activityGroupId: activity.activityGroupId,
+        activityGroupId: String(activity.activityGroupId || ''),
+        benchmarkTemplateId: String(activity.benchmarkTemplateId || ''),
         type: activity.type,
         description: activity.description || '',
-        instructions: activity.instructions || '',
+        notes: activity.notes || '',
       });
     }
   }, [activity]);
@@ -99,9 +102,10 @@ export function EditActivityModal({
     const activityData: UpdateActivityData = {
       name: values.name.trim(),
       activityGroupId: values.activityGroupId,
+      benchmarkTemplateId: values.benchmarkTemplateId || null,
       type: values.type,
       description: values.description.trim() || undefined,
-      instructions: values.instructions.trim() || undefined,
+      notes: values.notes.trim() || undefined,
     };
     
     const success = await onSubmit(activity._id, activityData);
@@ -129,17 +133,6 @@ export function EditActivityModal({
     >
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
-          {/* Activity Scope Indicator */}
-          <Group gap="xs">
-            <Text size="sm" c="dimmed">Scope:</Text>
-            <Badge
-              size="sm"
-              color={activity.gymId ? 'blue' : 'purple'}
-              variant="light"
-            >
-              {activity.gymId ? 'Gym Activity' : 'Global Activity'}
-            </Badge>
-          </Group>
           
           {/* Basic Information */}
           <TextInput
@@ -161,7 +154,7 @@ export function EditActivityModal({
             required
             disabled={false}
             {...form.getInputProps('activityGroupId')}
-            description={canEdit() ? (activityGroups.length > 0 ? "Select an existing activity group" : "No activity groups available") : "Activity group"}
+            description={activityGroups.length > 0 ? "Select an existing activity group" : "No activity groups available"}
           />
           
           {activityGroups.length === 0 && (
@@ -185,6 +178,19 @@ export function EditActivityModal({
             {...form.getInputProps('type')}
           />
           
+          {/* Benchmark Template */}
+          <Select
+            label="Benchmark Template (Optional)"
+            placeholder="Select benchmark template for intensity calculations"
+            data={benchmarkTemplates?.map(template => ({
+              value: template._id.toString(),
+              label: `${template.name} (${template.type} - ${template.unit})`
+            })) || []}
+            {...form.getInputProps('benchmarkTemplateId')}
+            description="Used for calculating intensity percentages in workout programs"
+            clearable
+          />
+          
           {/* Description */}
           <Textarea
             label="Description"
@@ -194,13 +200,13 @@ export function EditActivityModal({
             {...form.getInputProps('description')}
           />
           
-          {/* Instructions */}
+          {/* Notes */}
           <Textarea
-            label="Instructions"
-            placeholder="Detailed instructions for performing the activity..."
+            label="Notes"
+            placeholder="Additional notes about the activity..."
             rows={4}
             disabled={false}
-            {...form.getInputProps('instructions')}
+            {...form.getInputProps('notes')}
           />
           
           

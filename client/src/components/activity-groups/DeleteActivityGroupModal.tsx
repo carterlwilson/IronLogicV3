@@ -11,7 +11,7 @@ import {
   List
 } from '@mantine/core';
 import { IconAlertTriangle, IconInfoCircle } from '@tabler/icons-react';
-import { ActivityGroup } from '../../lib/activity-groups-api';
+import { type ActivityGroup } from '../../lib/activity-groups-api';
 
 interface DeleteActivityGroupModalProps {
   opened: boolean;

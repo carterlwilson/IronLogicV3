@@ -1,19 +1,5 @@
 import { api } from './api';
-
-export interface User {
-  _id: string;
-  name: string;
-  email: string;
-  userType: 'admin' | 'gym_owner' | 'coach' | 'client';
-  gymId?: {
-    _id: string;
-    name: string;
-    location: string;
-  };
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { User } from '../types/auth';
 
 export interface CreateUserData {
   name: string;

@@ -166,8 +166,6 @@ Master list of all possible workout activities.
   type: String, // enum: "strength", "conditioning", "diagnostic"
   description: String,
   instructions: String,
-  equipment: [String],
-  muscleGroups: [String],
   tags: [String],
   isActive: Boolean,
   createdAt: Date,

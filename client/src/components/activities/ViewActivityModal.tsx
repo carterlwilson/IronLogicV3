@@ -11,8 +11,7 @@ import {
   Card
 } from '@mantine/core';
 import { IconCalendar, IconUser, IconEdit } from '@tabler/icons-react';
-import { ActivityTemplate } from '../../lib/activities-api';
-import { useAuth } from '../../lib/auth-context';
+import { type ActivityTemplate } from '../../types/activities';
 
 interface ViewActivityModalProps {
   opened: boolean;
@@ -27,10 +26,6 @@ export function ViewActivityModal({
   onEdit,
   activity
 }: ViewActivityModalProps) {
-  const { user } = useAuth();
-
-  // If user can access this page, they can edit activities
-
   const handleEdit = () => {
     if (activity && onEdit) {
       onEdit(activity);
@@ -72,13 +67,6 @@ export function ViewActivityModal({
               >
                 {activity.type}
               </Badge>
-              <Badge
-                size="md"
-                color={activity.gymId ? 'blue' : 'purple'}
-                variant="light"
-              >
-                {activity.gymId ? 'Gym Activity' : 'Global Activity'}
-              </Badge>
             </Group>
           </div>
           
@@ -100,14 +88,21 @@ export function ViewActivityModal({
           <Group gap="lg">
             <div>
               <Text size="sm" c="dimmed" mb="xs">Activity Group</Text>
-              <Text fw={500}>{activity.activityGroup?.name || 'Unknown'}</Text>
-              {activity.activityGroup?.description && (
-                <Text size="sm" c="dimmed" mt="xs">
-                  {activity.activityGroup.description}
-                </Text>
-              )}
+              <Text fw={500}>{activity.activityGroupName || 'Unknown'}</Text>
             </div>
           </Group>
+
+          {activity.benchmarkTemplateName && (
+            <div>
+              <Text size="sm" c="dimmed" mb="xs">Benchmark Template</Text>
+              <Group gap="xs">
+                <Text fw={500}>{activity.benchmarkTemplateName}</Text>
+              </Group>
+              <Text size="xs" c="dimmed" mt="xs">
+                Used for calculating intensity percentages in workout programs
+              </Text>
+            </div>
+          )}
 
           {activity.description && (
             <div>
@@ -116,12 +111,12 @@ export function ViewActivityModal({
             </div>
           )}
 
-          {activity.instructions && (
+          {activity.notes && (
             <div>
-              <Text size="sm" c="dimmed" mb="xs">Instructions</Text>
+              <Text size="sm" c="dimmed" mb="xs">Notes</Text>
               <Card withBorder p="md" bg="gray.0">
                 <Text style={{ whiteSpace: 'pre-wrap' }}>
-                  {activity.instructions}
+                  {activity.notes}
                 </Text>
               </Card>
             </div>

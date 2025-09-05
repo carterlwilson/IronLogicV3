@@ -4,7 +4,6 @@ import {
   Table,
   Card,
   Stack,
-  Group,
   Text,
   Badge,
   ActionIcon,
@@ -19,7 +18,7 @@ import {
   IconTrash,
   IconPlus
 } from '@tabler/icons-react';
-import { ActivityGroup } from '../../lib/activity-groups-api';
+import { type ActivityGroup } from '../../lib/activity-groups-api';
 import { useAuth } from '../../lib/auth-context';
 
 interface ActivityGroupsTableProps {
@@ -80,13 +79,12 @@ export function ActivityGroupsTable({
               <Table.Th>Name</Table.Th>
               <Table.Th>Description</Table.Th>
               <Table.Th>Activities Count</Table.Th>
-              <Table.Th>Scope</Table.Th>
               <Table.Th>Status</Table.Th>
               {canPerformActions && <Table.Th w={60}>Actions</Table.Th>}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {activityGroups.map((group) => (
+            {(activityGroups || []).map((group) => (
               <Table.Tr key={group._id}>
                 <Table.Td>
                   <div>
@@ -110,16 +108,6 @@ export function ActivityGroupsTable({
                     color={group.count > 0 ? 'blue' : 'gray'}
                   >
                     {group.count} {group.count === 1 ? 'activity' : 'activities'}
-                  </Badge>
-                </Table.Td>
-                
-                <Table.Td>
-                  <Badge
-                    size="sm"
-                    color={group.gymId ? 'blue' : 'purple'}
-                    variant="light"
-                  >
-                    {group.gymId ? 'Gym' : 'Global'}
                   </Badge>
                 </Table.Td>
                 

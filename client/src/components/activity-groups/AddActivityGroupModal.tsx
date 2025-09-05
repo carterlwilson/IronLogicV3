@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import {
   Modal,
   TextInput,
@@ -8,12 +7,11 @@ import {
   Button,
   Stack,
   Group,
-  Switch,
   Select,
   Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { CreateActivityGroupData } from '../../lib/activity-groups-api';
+import { type CreateActivityGroupData } from '../../lib/activity-groups-api';
 import { useAuth } from '../../lib/auth-context';
 
 interface AddActivityGroupModalProps {
@@ -38,12 +36,11 @@ export function AddActivityGroupModal({
   loading
 }: AddActivityGroupModalProps) {
   const { user } = useAuth();
-  const [isGlobal, setIsGlobal] = useState(false);
   
   const form = useForm<FormData>({
     initialValues: {
       name: '',
-      gymId: user?.userType === 'admin' ? 'global' : (user?.gymId ? String(user.gymId) : ''),
+      gymId: user?.gymId ? String(user.gymId) : '',
       description: ''
     },
     validate: {
@@ -59,16 +56,6 @@ export function AddActivityGroupModal({
     }
   });
   
-  // Update gymId when global toggle changes
-  useEffect(() => {
-    if (user?.userType === 'admin') {
-      if (isGlobal) {
-        form.setFieldValue('gymId', 'global');
-      } else if (gymOptions && gymOptions.length > 0) {
-        form.setFieldValue('gymId', gymOptions[0]?.value || '');
-      }
-    }
-  }, [isGlobal, gymOptions, user?.userType]);
   
   const handleSubmit = async (values: FormData) => {
     // Convert form data to API format
@@ -77,27 +64,23 @@ export function AddActivityGroupModal({
       description: values.description.trim() || undefined
     };
 
-    // Only add gymId if it's not global
-    if (values.gymId && values.gymId !== 'global') {
+    // Always include gymId for gym-scoped groups
+    if (values.gymId) {
       groupData.gymId = values.gymId;
     }
     
     const success = await onSubmit(groupData);
     if (success) {
       form.reset();
-      setIsGlobal(false);
       onClose();
     }
   };
   
   const handleClose = () => {
     form.reset();
-    setIsGlobal(false);
     onClose();
   };
   
-  // Check if user can create global activity groups
-  const canCreateGlobal = user?.userType === 'admin';
   
   return (
     <Modal
@@ -117,26 +100,15 @@ export function AddActivityGroupModal({
             {...form.getInputProps('name')}
           />
           
-          {/* Scope Selection */}
-          {canCreateGlobal && (
-            <Stack gap="xs">
-              <Switch
-                label="Global Activity Group"
-                description="Global activity groups are available to all gyms"
-                checked={isGlobal}
-                onChange={(event) => setIsGlobal(event.currentTarget.checked)}
-              />
-              
-              {!isGlobal && gymOptions && (
-                <Select
-                  label="Gym"
-                  placeholder="Select gym"
-                  data={gymOptions}
-                  {...form.getInputProps('gymId')}
-                  required
-                />
-              )}
-            </Stack>
+          {/* Gym Selection for Admins */}
+          {user?.userType === 'admin' && (
+            <Select
+              label="Gym"
+              placeholder="Select gym to create group for"
+              data={gymOptions || []}
+              {...form.getInputProps('gymId')}
+              required
+            />
           )}
           
           {/* Description */}

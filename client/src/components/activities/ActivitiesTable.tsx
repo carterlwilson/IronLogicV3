@@ -29,7 +29,7 @@ import {
   IconX
 } from '@tabler/icons-react';
 import { useDebouncedValue } from '@mantine/hooks';
-import { ActivityTemplate, ActivityGroup } from '../../lib/activities-api';
+import { type ActivityTemplate, type ActivityGroup } from '../../types/activities';
 import { useAuth } from '../../lib/auth-context';
 
 interface ActivitiesTableProps {
@@ -78,7 +78,7 @@ export function ActivitiesTable({
   // Extract unique options from activities
   const filterOptions = useMemo(() => {
     return {
-      groups: activityGroups.map(group => ({ value: group._id, label: `${group.name} (${group.count} activities)` }))
+      groups: (activityGroups || []).map(group => ({ value: group._id, label: `${group.name} (${group.count} activities)` }))
     };
   }, [activityGroups]);
   
@@ -230,13 +230,13 @@ export function ActivitiesTable({
                 <Table.Th>Activity</Table.Th>
                 <Table.Th>Type</Table.Th>
                 <Table.Th>Group</Table.Th>
-                <Table.Th>Scope</Table.Th>
+                <Table.Th>Benchmark</Table.Th>
                 {canPerformActions && <Table.Th w={60}>Actions</Table.Th>}
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {activities.map((activity) => (
-                <Table.Tr key={activity._id}>
+              {(activities || []).map((activity, index) => (
+                <Table.Tr key={activity._id || `activity-${index}`}>
                   <Table.Td>
                     <div>
                       <Text fw={500} lineClamp={1}>{activity.name}</Text>
@@ -259,18 +259,19 @@ export function ActivitiesTable({
                   </Table.Td>
                   
                   <Table.Td>
-                    <Text size="sm">{activity.activityGroup?.name || 'Unknown'}</Text>
+                    <Text size="sm">{activity.activityGroupName}</Text>
                   </Table.Td>
                   
-                  
                   <Table.Td>
-                    <Badge
-                      size="sm"
-                      color={activity.gymId ? 'blue' : 'purple'}
-                      variant="light"
-                    >
-                      {activity.gymId ? 'Gym' : 'Global'}
-                    </Badge>
+                    {activity.benchmarkTemplateName ? (
+                      <Text size="sm" fw={500} lineClamp={1}>
+                        {activity.benchmarkTemplateName}
+                      </Text>
+                    ) : (
+                      <Text size="sm" c="dimmed">
+                        No benchmark
+                      </Text>
+                    )}
                   </Table.Td>
                   
                   {canPerformActions && (

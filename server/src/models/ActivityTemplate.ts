@@ -4,10 +4,11 @@ export interface IActivityTemplate extends Document {
   _id: Types.ObjectId;
   name: string;
   gymId?: Types.ObjectId; // null for global activities
-  activityGroupId: Types.ObjectId;
+  activityGroupId?: Types.ObjectId; // Optional - can be null if not assigned to a group
+  benchmarkTemplateId?: Types.ObjectId; // reference to BenchmarkTemplate for intensity calculations
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string;
-  instructions?: string;
+  notes?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -28,7 +29,12 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
   activityGroupId: { 
     type: Schema.Types.ObjectId,
     ref: 'ActivityGroup',
-    required: [true, 'Activity group is required']
+    default: null // Optional - can be null if not assigned to a group
+  },
+  benchmarkTemplateId: {
+    type: Schema.Types.ObjectId,
+    ref: 'BenchmarkTemplate',
+    default: null // Optional - only for strength activities that need benchmark references
   },
   type: { 
     type: String, 
@@ -43,10 +49,10 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  instructions: {
+  notes: {
     type: String,
     trim: true,
-    maxlength: [1000, 'Instructions cannot exceed 1000 characters']
+    maxlength: [1000, 'Notes cannot exceed 1000 characters']
   },
   isActive: { 
     type: Boolean, 
@@ -67,6 +73,7 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
 activityTemplateSchema.index({ gymId: 1, isActive: 1 });
 activityTemplateSchema.index({ type: 1, gymId: 1 });
 activityTemplateSchema.index({ activityGroup: 1, gymId: 1 });
+activityTemplateSchema.index({ benchmarkTemplateId: 1 });
 activityTemplateSchema.index({ name: 'text', description: 'text', instructions: 'text' });
 
 // Compound index for common query patterns

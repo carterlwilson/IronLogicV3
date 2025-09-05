@@ -14,7 +14,7 @@ import {
   Grid
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { CreateUserData } from '../../lib/users-api';
+import { type CreateUserData } from '../../lib/users-api';
 
 interface AddUserModalProps {
   opened: boolean;

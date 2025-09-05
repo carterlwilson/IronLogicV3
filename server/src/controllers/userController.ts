@@ -147,10 +147,17 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
         .lean();
     }
 
+    // Transform to ensure proper ID format
+    const transformedUser = {
+      ...user,
+      gymId: (user.gymId as any)?._id || user.gymId, // Ensure ID is string
+      gym: user.gymId // Keep populated data for display
+    };
+
     res.json({
       success: true,
       data: {
-        user,
+        user: transformedUser,
         ...(clientData && { clientProfile: clientData })
       }
     });
@@ -349,9 +356,16 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
       await client.save();
     }
 
+    // Transform to ensure proper ID format
+    const transformedUser = {
+      ...updatedUser!,
+      gymId: (updatedUser!.gymId as any)?._id || updatedUser!.gymId, // Ensure ID is string
+      gym: updatedUser!.gymId // Keep populated data for display
+    };
+
     res.json({
       success: true,
-      data: { user: updatedUser },
+      data: { user: transformedUser },
       message: 'User updated successfully'
     });
 

@@ -10,8 +10,7 @@ import {
   Alert
 } from '@mantine/core';
 import { IconAlertTriangle } from '@tabler/icons-react';
-import { ActivityTemplate } from '../../lib/activities-api';
-import { useAuth } from '../../lib/auth-context';
+import { type ActivityTemplate } from '../../types/activities';
 
 interface DeleteActivityModalProps {
   opened: boolean;
@@ -28,8 +27,6 @@ export function DeleteActivityModal({
   activity,
   loading
 }: DeleteActivityModalProps) {
-  const { user } = useAuth();
-
   const handleConfirm = async () => {
     if (!activity) return;
     
@@ -39,18 +36,6 @@ export function DeleteActivityModal({
     }
   };
 
-  // Check if user can delete this activity
-  const canDelete = () => {
-    if (!activity || !user) return false;
-    
-    if (user.userType === 'admin') return true;
-    
-    // Non-admin users can only delete activities for their gym
-    if (activity.gymId && user.gymId === activity.gymId) return true;
-    
-    // Can't delete global activities unless admin
-    return false;
-  };
 
   if (!activity) return null;
 
@@ -94,7 +79,7 @@ export function DeleteActivityModal({
 
           <Group gap="xs">
             <Text size="sm" c="dimmed">Group:</Text>
-            <Text size="sm">{activity.activityGroup}</Text>
+            <Text size="sm">{activity.activityGroupName || 'Unknown'}</Text>
           </Group>
 
           <Group gap="xs">
@@ -105,15 +90,6 @@ export function DeleteActivityModal({
           </Group>
         </Stack>
 
-        {!canDelete() && (
-          <Alert
-            color="orange"
-            variant="light"
-          >
-            You don't have permission to delete this activity template.
-          </Alert>
-        )}
-
         <Group justify="flex-end" mt="md">
           <Button
             variant="subtle"
@@ -122,15 +98,13 @@ export function DeleteActivityModal({
           >
             Cancel
           </Button>
-          {canDelete() && (
-            <Button
-              color="red"
-              onClick={handleConfirm}
-              loading={loading}
-            >
-              Delete Activity
-            </Button>
-          )}
+          <Button
+            color="red"
+            onClick={handleConfirm}
+            loading={loading}
+          >
+            Delete Activity
+          </Button>
         </Group>
       </Stack>
     </Modal>

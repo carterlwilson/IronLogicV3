@@ -12,7 +12,7 @@ import {
 import { useForm } from '@mantine/form';
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { useAuth } from '../../lib/auth-context';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 interface ForgotPasswordFormData {
   email: string;

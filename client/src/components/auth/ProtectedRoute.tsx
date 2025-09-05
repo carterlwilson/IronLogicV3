@@ -1,7 +1,7 @@
 'use client';
 
-import { ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { type ReactNode, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth-context';
 import { Center, Loader, Alert } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -20,13 +20,13 @@ export function ProtectedRoute({
   fallback 
 }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push(redirectTo);
+      navigate(redirectTo);
     }
-  }, [user, isLoading, router, redirectTo]);
+  }, [user, isLoading, navigate, redirectTo]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {

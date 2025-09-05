@@ -9,7 +9,7 @@ import {
   Stack
 } from '@mantine/core';
 import { IconAlertTriangle } from '@tabler/icons-react';
-import { User } from '../../lib/users-api';
+import { type User } from '../../types/auth';
 
 interface DeleteUserModalProps {
   opened: boolean;
@@ -28,7 +28,6 @@ export function DeleteUserModal({
 }: DeleteUserModalProps) {
   if (!user) return null;
 
-  const isAdmin = user.userType === 'admin';
   const hasGym = user.gymId;
 
   return (
@@ -64,14 +63,12 @@ export function DeleteUserModal({
           </Text>
         </div>
 
-        {isAdmin && (
-          <Alert color="orange" variant="light">
-            <Text size="sm">
-              <Text component="span" fw={500}>Warning:</Text> You are about to delete an administrator account. 
-              This user will lose all administrative privileges immediately.
-            </Text>
-          </Alert>
-        )}
+        <Alert color="orange" variant="light">
+          <Text size="sm">
+            <Text component="span" fw={500}>Warning:</Text> You are about to delete an administrator account. 
+            This user will lose all administrative privileges immediately.
+          </Text>
+        </Alert>
 
         {user.userType === 'client' && (
           <Alert color="blue" variant="light">

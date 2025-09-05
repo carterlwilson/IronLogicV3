@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import { usersApi, User, CreateUserData, UpdateUserData, UsersQueryParams } from '../lib/users-api';
+import { usersApi, type CreateUserData, type UpdateUserData, type UsersQueryParams } from '../lib/users-api';
+import type { User } from '../types/auth';
 import { notifications } from '@mantine/notifications';
 
 // Helper to generate temporary IDs for optimistic updates

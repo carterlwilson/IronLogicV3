@@ -12,7 +12,7 @@ import {
   Button
 } from '@mantine/core';
 import { IconCalendar, IconMail, IconUser, IconBuilding, IconEdit } from '@tabler/icons-react';
-import { User } from '../../lib/users-api';
+import type { User } from '../../types/auth';
 
 interface ViewUserModalProps {
   opened: boolean;

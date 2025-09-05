@@ -18,7 +18,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconBuilding, IconMail, IconPhone, IconWorld } from '@tabler/icons-react';
-import { CreateGymData, GymOwner } from '../../lib/gyms-api';
+import { type CreateGymData, type GymOwner } from '../../lib/gyms-api';
 
 interface AddGymModalProps {
   opened: boolean;

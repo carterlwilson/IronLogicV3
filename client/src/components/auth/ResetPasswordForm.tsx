@@ -11,7 +11,7 @@ import {
 import { useForm } from '@mantine/form';
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import { useAuth } from '../../lib/auth-context';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 
 interface ResetPasswordFormData {
   password: string;
@@ -27,7 +27,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const { resetPassword } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const form = useForm<ResetPasswordFormData>({
     initialValues: {
@@ -57,7 +57,7 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
       
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        router.push('/auth/login');
+        navigate('/auth/login');
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Failed to reset password. Please try again.');

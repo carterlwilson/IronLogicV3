@@ -19,7 +19,7 @@ import {
   IconMail,
   IconPhone
 } from '@tabler/icons-react';
-import { Gym } from '../../lib/gyms-api';
+import { type Gym } from '../../lib/gyms-api';
 
 interface DeleteGymModalProps {
   opened: boolean;

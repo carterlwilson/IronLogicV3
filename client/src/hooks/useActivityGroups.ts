@@ -4,10 +4,10 @@ import { useState, useCallback } from 'react';
 import { notifications } from '@mantine/notifications';
 import { 
   activityGroupsApi, 
-  ActivityGroup, 
-  CreateActivityGroupData, 
-  UpdateActivityGroupData 
+  type CreateActivityGroupData,
+  type UpdateActivityGroupData
 } from '../lib/activity-groups-api';
+import { type ActivityGroup } from '../types/activities'
 
 // Helper to generate temporary IDs for optimistic updates
 const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -52,7 +52,7 @@ export function useActivityGroups(): UseActivityGroupsReturn {
       setError(null);
       
       const response = await activityGroupsApi.getActivityGroups(gymId);
-      
+      console.log('groups', response);
       if (response.success) {
         setActivityGroups(response.data.activityGroups);
       } else {
