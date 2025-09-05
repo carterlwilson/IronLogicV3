@@ -31,15 +31,26 @@ import {
   IconFilter
 } from '@tabler/icons-react';
 import { useDebouncedValue } from '@mantine/hooks';
-import { useUsers } from '../../hooks/useUsers';
-import { User } from '../../lib/users-api';
+import { type User } from '../../types/auth';
 
 interface UsersTableProps {
+  users: User[];
+  loading: boolean;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  } | null;
   onEditUser: (user: User) => void;
   onDeleteUser: (user: User) => void;
   onResetPassword: (user: User) => void;
   onViewUser: (user: User) => void;
   onAddUser: () => void;
+  onSearch: (filters: any) => void;
+  onPageChange: (page: number) => void;
   gymOptions: { value: string; label: string }[];
 }
 
@@ -66,55 +77,44 @@ const getUserTypeBadge = (userType: string) => {
 };
 
 export function UsersTable({
+  users,
+  loading,
+  pagination,
   onEditUser,
   onDeleteUser,
   onResetPassword,
   onViewUser,
   onAddUser,
+  onSearch,
+  onPageChange,
   gymOptions
 }: UsersTableProps) {
-  const { users, loading, pagination, fetchUsers } = useUsers();
   const [search, setSearch] = useState('');
   const [userTypeFilter, setUserTypeFilter] = useState<string>('');
   const [gymFilter, setGymFilter] = useState<string>('');
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [debouncedSearch] = useDebouncedValue(search, 300);
 
-  // Fetch users when filters change
+  // Trigger search when filters change
   useEffect(() => {
-    const params = {
-      page: pagination?.page || 1,
-      limit: 20,
-      ...(debouncedSearch && { search: debouncedSearch }),
-      ...(userTypeFilter && { userType: userTypeFilter }),
-      ...(gymFilter && { gymId: gymFilter }),
-      sort: '-createdAt'
-    };
-    fetchUsers(params);
-  }, [debouncedSearch, userTypeFilter, gymFilter, fetchUsers]);
-
-  // Initial load
-  useEffect(() => {
-    fetchUsers({ page: 1, limit: 20, sort: '-createdAt' });
-  }, [fetchUsers]);
+    const filters: any = {};
+    
+    if (debouncedSearch) filters.search = debouncedSearch;
+    if (userTypeFilter) filters.userType = userTypeFilter;
+    if (gymFilter) filters.gymId = gymFilter;
+    
+    onSearch(filters);
+  }, [debouncedSearch, userTypeFilter, gymFilter, onSearch]);
 
   const handlePageChange = (page: number) => {
-    const params = {
-      page,
-      limit: 20,
-      ...(debouncedSearch && { search: debouncedSearch }),
-      ...(userTypeFilter && { userType: userTypeFilter }),
-      ...(gymFilter && { gymId: gymFilter }),
-      sort: '-createdAt'
-    };
-    fetchUsers(params);
+    onPageChange(page);
   };
 
   const handleSelectAll = () => {
     if (selectedUsers.size === users.length) {
       setSelectedUsers(new Set());
     } else {
-      setSelectedUsers(new Set(users.map(user => user._id)));
+      setSelectedUsers(new Set((users || []).map(user => user._id)));
     }
   };
 
@@ -150,7 +150,7 @@ export function UsersTable({
           <Button
             leftSection={<IconRefresh size="1rem" />}
             variant="light"
-            onClick={() => fetchUsers({ page: pagination?.page || 1, limit: 20 })}
+            onClick={() => onSearch({})}
             loading={loading}
           >
             Refresh
@@ -256,7 +256,7 @@ export function UsersTable({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {users.map((user) => (
+              {(users || []).map((user) => (
                 <Table.Tr key={user._id}>
                   <Table.Td>
                     <Checkbox

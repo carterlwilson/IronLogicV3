@@ -52,22 +52,36 @@ export const getWorkoutPrograms = async (params: WorkoutProgramsQueryParams = {}
   if (params.sort) queryParams.append('sort', params.sort);
 
   const response = await api.get(`/api/workout-programs?${queryParams.toString()}`);
-  return response.data;
+  return {
+    programs: response.data.data.programs,
+    page: response.data.data.pagination.page,
+    total: response.data.data.pagination.total,
+    totalPages: response.data.data.pagination.totalPages,
+    hasNextPage: response.data.data.pagination.hasNextPage,
+    hasPrevPage: response.data.data.pagination.hasPrevPage
+  };
 };
 
 export const getWorkoutProgram = async (id: string): Promise<WorkoutProgram> => {
   const response = await api.get(`/api/workout-programs/${id}`);
-  return response.data;
+  return response.data.data.program;
 };
 
 export const createWorkoutProgram = async (data: CreateWorkoutProgramData): Promise<WorkoutProgram> => {
   const response = await api.post('/api/workout-programs', data);
-  return response.data;
+  return response.data.data.program;
 };
 
 export const updateWorkoutProgram = async (id: string, data: UpdateWorkoutProgramData): Promise<WorkoutProgram> => {
-  const response = await api.put(`/api/workout-programs/${id}`, data);
-  return response.data;
+  try {
+    console.log('updateWorkoutProgram API call starting:', { id, data });
+    const response = await api.put(`/api/workout-programs/${id}`, data);
+    console.log('updateWorkoutProgram API response:', response.data);
+    return response.data.data.program;
+  } catch (error) {
+    console.error('updateWorkoutProgram API error:', error);
+    throw error;
+  }
 };
 
 export const deleteWorkoutProgram = async (id: string): Promise<void> => {
@@ -76,12 +90,12 @@ export const deleteWorkoutProgram = async (id: string): Promise<void> => {
 
 export const copyWorkoutProgram = async (id: string, data: CopyWorkoutProgramData): Promise<WorkoutProgram> => {
   const response = await api.post(`/api/workout-programs/${id}/copy`, data);
-  return response.data;
+  return response.data.data.program;
 };
 
 export const getWorkoutProgramVolume = async (id: string): Promise<any> => {
   const response = await api.get(`/api/workout-programs/${id}/volume`);
-  return response.data;
+  return response.data.data;
 };
 
 // Export types for use in components

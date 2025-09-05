@@ -13,7 +13,6 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { type ActivityGroup, type UpdateActivityGroupData } from '../../lib/activity-groups-api';
-import { useAuth } from '../../lib/auth-context';
 
 interface EditActivityGroupModalProps {
   opened: boolean;
@@ -35,8 +34,7 @@ export function EditActivityGroupModal({
   activityGroup,
   loading
 }: EditActivityGroupModalProps) {
-  const { user } = useAuth();
-  
+
   const form = useForm<FormData>({
     initialValues: {
       name: '',

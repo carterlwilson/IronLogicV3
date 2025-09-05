@@ -13,6 +13,7 @@ import activityRoutes from './routes/activities';
 import { activityGroupsRouter } from './routes/activityGroups';
 import benchmarkTemplateRoutes from './routes/benchmarkTemplates';
 import workoutProgramRoutes from './routes/workoutPrograms';
+import scheduleTemplateRoutes from './routes/scheduleTemplates';
 
 dotenv.config();
 
@@ -134,6 +135,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/activity-groups', activityGroupsRouter);
 app.use('/api/benchmark-templates', benchmarkTemplateRoutes);
 app.use('/api/workout-programs', workoutProgramRoutes);
+app.use('/api/schedule-templates', scheduleTemplateRoutes);
 
 app.use('*', (_req, res) => {
   res.status(404).json({ error: 'Route not found' });

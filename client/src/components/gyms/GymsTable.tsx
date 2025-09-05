@@ -201,7 +201,7 @@ export function GymsTable({
         </Paper>
       ) : (
         <Grid>
-          {gyms.map((gym) => (
+          {(gyms || []).map((gym) => (
             <Grid.Col key={gym._id} span={{ base: 12, sm: 6, lg: 4 }}>
               <Card shadow="sm" padding="lg" radius="md" withBorder h="100%">
                 <Stack gap="md" h="100%">

@@ -125,10 +125,10 @@ export const getActivities = async (req: AuthRequest, res: Response): Promise<vo
     // Transform activities to include activity group and benchmark template names
     const transformedActivities = activities.map((activity: any) => ({
       ...activity,
-      activityGroup: activity.activityGroupId.toString(), // Keep ID for backward compatibility
+      activityGroup: activity.activityGroupId?.toString() || null, // Keep ID for backward compatibility
       activityGroupName: activity.activityGroupId 
-        ? activityGroupMap.get(activity.activityGroupId.toString()) || 'Unknown'
-        : 'Unknown',
+        ? activityGroupMap.get(activity.activityGroupId.toString()) || 'No Group'
+        : 'No Group',
       benchmarkTemplateName: activity.benchmarkTemplateId 
         ? benchmarkTemplateMap.get(activity.benchmarkTemplateId.toString()) || null
         : null
@@ -212,7 +212,7 @@ export const getActivityById = async (req: AuthRequest, res: Response): Promise<
     const transformedActivity = {
       ...activity,
       activityGroup: activity.activityGroupId?.toString() || null, // Keep ID for backward compatibility
-      activityGroupName: activityGroupData?.name || 'Unknown',
+      activityGroupName: activityGroupData?.name || 'No Group',
       benchmarkTemplateName: benchmarkTemplateData?.name || null
     };
 
@@ -240,41 +240,44 @@ export const createActivity = async (req: AuthRequest, res: Response): Promise<v
       benchmarkTemplateId,
       type,
       description,
-      instructions
+      notes
     } = req.body;
     
     // Validate required fields
-    if (!name || !activityGroupId || !type) {
+    if (!name || !type) {
       res.status(400).json({
         success: false,
-        message: 'Missing required fields: name, activityGroupId, type'
+        message: 'Missing required fields: name, type'
       });
       return;
     }
 
-    // Verify activity group exists and user has access to it
-    const activityGroup = await ActivityGroup.findById(activityGroupId);
-    if (!activityGroup) {
-      res.status(400).json({
-        success: false,
-        message: 'Activity group not found'
-      });
-      return;
-    }
+    // Verify activity group exists and user has access to it (if provided)
+    let activityGroup = null;
+    if (activityGroupId) {
+      activityGroup = await ActivityGroup.findById(activityGroupId);
+      if (!activityGroup) {
+        res.status(400).json({
+          success: false,
+          message: 'Activity group not found'
+        });
+        return;
+      }
 
-    // Check if user can use this activity group
-    const canUseGroup = req.user!.userType === 'admin' || 
-                       req.user!.userType === 'gym_owner' ||
-                       req.user!.userType === 'coach' ||
-                       !activityGroup.gymId || 
-                       (req.user!.gymId && req.user!.gymId === activityGroup.gymId.toString());
-    
-    if (!canUseGroup) {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied to this activity group'
-      });
-      return;
+      // Check if user can use this activity group
+      const canUseGroup = req.user!.userType === 'admin' || 
+                         req.user!.userType === 'gym_owner' ||
+                         req.user!.userType === 'coach' ||
+                         !activityGroup.gymId || 
+                         (req.user!.gymId && req.user!.gymId === activityGroup.gymId.toString());
+      
+      if (!canUseGroup) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied to this activity group'
+        });
+        return;
+      }
     }
 
     // Validate benchmark template if provided
@@ -368,12 +371,16 @@ export const createActivity = async (req: AuthRequest, res: Response): Promise<v
     const activityData: Partial<IActivityTemplate> = {
       name: name.trim(),
       gymId: assignedGymId,
-      activityGroupId: new Types.ObjectId(activityGroupId),
       benchmarkTemplateId: benchmarkTemplateObjectId as any,
       type,
       description: description?.trim(),
-      instructions: instructions?.trim()
+      notes: notes?.trim()
     };
+    
+    // Only add activityGroupId if it's provided
+    if (activityGroupId) {
+      activityData.activityGroupId = new Types.ObjectId(activityGroupId);
+    }
     
     const activity = new ActivityTemplate(activityData);
     await activity.save();
@@ -395,7 +402,7 @@ export const createActivity = async (req: AuthRequest, res: Response): Promise<v
     const transformedActivity = {
       ...activityJson,
       activityGroup: activity.activityGroupId?.toString() || null, // Keep ID for backward compatibility
-      activityGroupName: activityGroupData?.name || 'Unknown',
+      activityGroupName: activityGroupData?.name || 'No Group',
       benchmarkTemplateName: benchmarkTemplateData?.name || null
     };
 
@@ -424,7 +431,7 @@ export const updateActivity = async (req: AuthRequest, res: Response): Promise<v
       benchmarkTemplateId,
       type,
       description,
-      instructions
+      notes
     } = req.body;
     
     if (!id || !Types.ObjectId.isValid(id)) {
@@ -493,41 +500,46 @@ export const updateActivity = async (req: AuthRequest, res: Response): Promise<v
     const updateData: any = {};
     if (name !== undefined) updateData.name = name.trim();
     if (activityGroupId !== undefined) {
-      // Validate activityGroupId is a valid ObjectId string
-      if (!Types.ObjectId.isValid(activityGroupId)) {
-        res.status(400).json({
-          success: false,
-          message: 'Invalid activity group ID'
-        });
-        return;
-      }
-      
-      // Verify activity group exists and user has access to it
-      const activityGroup = await ActivityGroup.findById(new Types.ObjectId(activityGroupId));
-      if (!activityGroup) {
-        res.status(400).json({
-          success: false,
-          message: 'Activity group not found'
-        });
-        return;
-      }
+      if (activityGroupId === null || activityGroupId === '') {
+        // Remove activity group association
+        updateData.activityGroupId = null;
+      } else {
+        // Validate activityGroupId is a valid ObjectId string
+        if (!Types.ObjectId.isValid(activityGroupId)) {
+          res.status(400).json({
+            success: false,
+            message: 'Invalid activity group ID'
+          });
+          return;
+        }
+        
+        // Verify activity group exists and user has access to it
+        const activityGroup = await ActivityGroup.findById(new Types.ObjectId(activityGroupId));
+        if (!activityGroup) {
+          res.status(400).json({
+            success: false,
+            message: 'Activity group not found'
+          });
+          return;
+        }
 
-      // Check if user can use this activity group
-      const canUseGroup = req.user!.userType === 'admin' || 
-                         req.user!.userType === 'gym_owner' ||
-                         req.user!.userType === 'coach' ||
-                         !activityGroup.gymId || 
-                         (req.user!.gymId && req.user!.gymId === activityGroup.gymId.toString());
-      
-      if (!canUseGroup) {
-        res.status(403).json({
-          success: false,
-          message: 'Access denied to this activity group'
-        });
-        return;
-      }
+        // Check if user can use this activity group
+        const canUseGroup = req.user!.userType === 'admin' || 
+                           req.user!.userType === 'gym_owner' ||
+                           req.user!.userType === 'coach' ||
+                           !activityGroup.gymId || 
+                           (req.user!.gymId && req.user!.gymId === activityGroup.gymId.toString());
+        
+        if (!canUseGroup) {
+          res.status(403).json({
+            success: false,
+            message: 'Access denied to this activity group'
+          });
+          return;
+        }
 
-      updateData.activityGroupId = new Types.ObjectId(activityGroupId);
+        updateData.activityGroupId = new Types.ObjectId(activityGroupId);
+      }
     }
 
     // Handle benchmark template update
@@ -575,7 +587,7 @@ export const updateActivity = async (req: AuthRequest, res: Response): Promise<v
 
     if (type !== undefined) updateData.type = type;
     if (description !== undefined) updateData.description = description?.trim();
-    if (instructions !== undefined) updateData.instructions = instructions?.trim();
+    if (notes !== undefined) updateData.notes = notes?.trim();
     
     const updatedActivity = await ActivityTemplate.findByIdAndUpdate(
       new Types.ObjectId(id),
@@ -598,7 +610,7 @@ export const updateActivity = async (req: AuthRequest, res: Response): Promise<v
     const transformedActivity = {
       ...activityJson,
       activityGroup: updatedActivity!.activityGroupId?.toString() || null, // Keep ID for backward compatibility
-      activityGroupName: activityGroupData?.name || 'Unknown',
+      activityGroupName: activityGroupData?.name || 'No Group',
       benchmarkTemplateName: benchmarkTemplateData?.name || null
     };
     

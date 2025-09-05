@@ -50,12 +50,14 @@ export interface WorkoutProgram {
   description?: string;
   blocks: ProgramBlock[];
   durationWeeks: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  tags: string[];
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  tags?: string[];
   isActive: boolean;
   isTemplate: boolean;
-  createdAt: string;
-  updatedAt: string;
+  version: number;
+  parentProgramId?: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 export interface ProgramBlock {
@@ -85,6 +87,7 @@ export interface ProgramDay {
 export interface ProgramActivity {
   activityId: string;
   templateId: string;
+  templateName: string; // Name of the activity template
   orderIndex: number;
   sets?: number;
   reps?: number;
@@ -146,4 +149,35 @@ export interface ClientBenchmark {
   unit: string;
   recordedAt: string;
   recordedBy: string;
+}
+
+// Schedule Template types
+export interface ScheduleTemplate {
+  _id: string;
+  gymId: string;
+  name: string;
+  description?: string;
+  isDefault: boolean;
+  timeslots: TemplateTimeslot[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  createdBy: string;
+  // Virtual fields
+  totalTimeslots?: number;
+  totalCoaches?: number;
+}
+
+export interface TemplateTimeslot {
+  timeslotId: string;
+  dayOfWeek: number; // 1-7 (Monday-Sunday)
+  startTime: string; // "09:00" format
+  endTime: string;   // "10:00" format
+  locationId: string;
+  coachId: string;
+  programId?: string;
+  maxCapacity: number;
+  className?: string;
+  notes?: string;
+  isActive: boolean;
 }

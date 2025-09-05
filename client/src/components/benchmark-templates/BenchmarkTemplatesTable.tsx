@@ -85,7 +85,7 @@ export function BenchmarkTemplatesTable({
   // Extract unique options from benchmark templates
   const filterOptions = useMemo(() => {
     return {
-      tags: tags.map(tag => ({ value: tag.tag, label: `${tag.tag} (${tag.count})` }))
+      tags: (tags || []).map(tag => ({ value: tag.tag, label: `${tag.tag} (${tag.count})` }))
     };
   }, [tags]);
   
@@ -267,7 +267,7 @@ export function BenchmarkTemplatesTable({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {benchmarkTemplates.map((template) => (
+              {(benchmarkTemplates || []).map((template) => (
                 <Table.Tr key={template._id}>
                   <Table.Td>
                     <div>
@@ -302,14 +302,14 @@ export function BenchmarkTemplatesTable({
                   
                   <Table.Td>
                     <Group gap="xs">
-                      {template.tags.slice(0, 2).map((tag, index) => (
+                      {(template.tags || []).slice(0, 2).map((tag, index) => (
                         <Badge key={`${template._id}-${tag}-${index}`} size="xs" variant="dot">
                           {tag}
                         </Badge>
                       ))}
-                      {template.tags.length > 2 && (
+                      {(template.tags || []).length > 2 && (
                         <Badge size="xs" variant="light" color="gray">
-                          +{template.tags.length - 2}
+                          +{(template.tags || []).length - 2}
                         </Badge>
                       )}
                     </Group>

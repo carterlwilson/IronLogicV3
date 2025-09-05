@@ -145,32 +145,14 @@ export function useWorkoutPrograms(): UseWorkoutProgramsReturn {
     }
   }, []);
 
-  // Update existing workout program with optimistic loading
+  // Update existing workout program
   const updateProgram = useCallback(async (id: string, programData: UpdateWorkoutProgramData): Promise<boolean> => {
-    // Find current program to store for rollback
-    const currentProgram = programs.find(program => program._id.toString() === id);
-    if (!currentProgram) return false;
-
-    // Apply optimistic update immediately
-    setPrograms(prev => prev.map(program => {
-      if (program._id.toString() === id) {
-        return {
-          ...program,
-          ...(programData.name && { name: programData.name }),
-          ...(programData.description !== undefined && { description: programData.description }),
-          ...(programData.isTemplate !== undefined && { isTemplate: programData.isTemplate }),
-          ...(programData.blocks && { blocks: programData.blocks }),
-          updatedAt: new Date(),
-          version: program.version + 1
-        };
-      }
-      return program;
-    }));
-
     try {
       setError(null);
       
+      console.log('Calling updateWorkoutProgram API with:', { id, programData });
       const updatedProgram = await updateWorkoutProgram(id, programData);
+      console.log('API call successful, received:', updatedProgram);
       
       notifications.show({
         title: 'Success',
@@ -178,17 +160,19 @@ export function useWorkoutPrograms(): UseWorkoutProgramsReturn {
         color: 'green',
       });
       
-      // Replace optimistic update with real data from server
+      // Update the program in the list if it exists (for list view optimistic updates)
       setPrograms(prev => prev.map(program => 
         program._id.toString() === id ? updatedProgram : program
       ));
       
       return true;
     } catch (err: any) {
-      // Rollback optimistic update on error
-      setPrograms(prev => prev.map(program => 
-        program._id.toString() === id ? currentProgram : program
-      ));
+      console.error('updateProgram error:', err);
+      console.error('Error details:', { 
+        message: err.message, 
+        response: err.response?.data, 
+        status: err.response?.status 
+      });
       
       const message = err.response?.data?.message || err.message || 'Failed to update workout program';
       setError(message);
@@ -199,7 +183,7 @@ export function useWorkoutPrograms(): UseWorkoutProgramsReturn {
       });
       return false;
     }
-  }, [programs]);
+  }, []);
 
   // Delete workout program with optimistic loading
   const deleteProgram = useCallback(async (id: string): Promise<boolean> => {

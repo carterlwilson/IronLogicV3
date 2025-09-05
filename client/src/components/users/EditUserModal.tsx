@@ -14,7 +14,8 @@ import {
   Switch
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { type UpdateUserData, type User } from '../../lib/users-api';
+import { type UpdateUserData } from '../../lib/users-api';
+import { type User } from '../../types/auth';
 
 interface EditUserModalProps {
   opened: boolean;

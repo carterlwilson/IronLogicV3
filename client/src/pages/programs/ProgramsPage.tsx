@@ -127,7 +127,7 @@ export function ProgramsPage() {
 
   const content = getRoleSpecificContent();
 
-  if (loading && programs.length === 0) {
+  if (loading && (programs || []).length === 0) {
     return (
       <AppLayout>
         <Container size="lg">
@@ -197,7 +197,7 @@ export function ProgramsPage() {
           )}
 
           {/* Programs Grid */}
-          {programs.length === 0 && !loading ? (
+          {(programs || []).length === 0 && !loading ? (
             <Card withBorder p="xl">
               <Stack align="center" gap="md">
                 <Text size="lg" fw={500}>No programs found</Text>
@@ -218,7 +218,7 @@ export function ProgramsPage() {
             </Card>
           ) : (
             <Grid>
-              {programs.map((program) => (
+              {(programs || []).map((program) => (
                 <Grid.Col key={program._id.toString()} span={{ base: 12, sm: 6, lg: 4 }}>
                   <Card withBorder p="md" h="100%">
                     <Stack gap="sm" h="100%">

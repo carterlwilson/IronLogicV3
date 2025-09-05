@@ -4,11 +4,11 @@ export interface IActivityTemplate extends Document {
   _id: Types.ObjectId;
   name: string;
   gymId?: Types.ObjectId; // null for global activities
-  activityGroupId: Types.ObjectId;
+  activityGroupId?: Types.ObjectId; // Optional - can be null if not assigned to a group
   benchmarkTemplateId?: Types.ObjectId; // reference to BenchmarkTemplate for intensity calculations
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string;
-  instructions?: string;
+  notes?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -29,7 +29,7 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
   activityGroupId: { 
     type: Schema.Types.ObjectId,
     ref: 'ActivityGroup',
-    required: [true, 'Activity group is required']
+    default: null // Optional - can be null if not assigned to a group
   },
   benchmarkTemplateId: {
     type: Schema.Types.ObjectId,
@@ -49,10 +49,10 @@ const activityTemplateSchema = new Schema<IActivityTemplate>({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  instructions: {
+  notes: {
     type: String,
     trim: true,
-    maxlength: [1000, 'Instructions cannot exceed 1000 characters']
+    maxlength: [1000, 'Notes cannot exceed 1000 characters']
   },
   isActive: { 
     type: Boolean, 

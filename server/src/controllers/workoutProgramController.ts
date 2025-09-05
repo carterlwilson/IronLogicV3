@@ -188,12 +188,62 @@ export const createWorkoutProgram = async (req: AuthRequest, res: Response) => {
       assignedGymId = new Types.ObjectId(userGymId);
     }
 
+    // Clean blocks data by removing temporary IDs
+    const cleanBlocks = (blocks || []).map((block: any) => {
+      const cleanBlock = { ...block };
+      // Remove temporary blockId if it exists
+      if (cleanBlock.blockId && typeof cleanBlock.blockId === 'string' && cleanBlock.blockId.startsWith('block-')) {
+        delete cleanBlock.blockId;
+      }
+      
+      if (cleanBlock.weeks) {
+        cleanBlock.weeks = cleanBlock.weeks.map((week: any) => {
+          const cleanWeek = { ...week };
+          // Remove temporary weekId if it exists
+          if (cleanWeek.weekId && typeof cleanWeek.weekId === 'string' && cleanWeek.weekId.startsWith('week-')) {
+            delete cleanWeek.weekId;
+          }
+          
+          if (cleanWeek.days) {
+            cleanWeek.days = cleanWeek.days.map((day: any) => {
+              const cleanDay = { ...day };
+              // Remove temporary dayId if it exists
+              if (cleanDay.dayId && typeof cleanDay.dayId === 'string' && cleanDay.dayId.startsWith('day-')) {
+                delete cleanDay.dayId;
+              }
+              
+              if (cleanDay.activities) {
+                cleanDay.activities = cleanDay.activities.map((activity: any) => {
+                  const cleanActivity = { ...activity };
+                  // Remove temporary activityId if it exists
+                  if (cleanActivity.activityId && typeof cleanActivity.activityId === 'string' && cleanActivity.activityId.startsWith('activity-')) {
+                    delete cleanActivity.activityId;
+                  }
+                  // Handle populated templateId - extract just the ID if it's an object
+                  if (cleanActivity.templateId && typeof cleanActivity.templateId === 'object') {
+                    cleanActivity.templateId = cleanActivity.templateId._id || cleanActivity.templateId.id;
+                  }
+                  return cleanActivity;
+                });
+              }
+              
+              return cleanDay;
+            });
+          }
+          
+          return cleanWeek;
+        });
+      }
+      
+      return cleanBlock;
+    });
+
     // Validate program structure
     const programData = {
       name: name.trim(),
       gymId: assignedGymId,
       description: description?.trim(),
-      blocks: blocks || [],
+      blocks: cleanBlocks,
       isTemplate: Boolean(isTemplate)
     };
 
@@ -355,11 +405,61 @@ export const updateWorkoutProgram = async (req: AuthRequest, res: Response) => {
     }
 
     if (blocks !== undefined) {
+      // Clean blocks data by removing temporary IDs
+      const cleanBlocks = blocks.map((block: any) => {
+        const cleanBlock = { ...block };
+        // Remove temporary blockId if it exists
+        if (cleanBlock.blockId && typeof cleanBlock.blockId === 'string' && cleanBlock.blockId.startsWith('block-')) {
+          delete cleanBlock.blockId;
+        }
+        
+        if (cleanBlock.weeks) {
+          cleanBlock.weeks = cleanBlock.weeks.map((week: any) => {
+            const cleanWeek = { ...week };
+            // Remove temporary weekId if it exists
+            if (cleanWeek.weekId && typeof cleanWeek.weekId === 'string' && cleanWeek.weekId.startsWith('week-')) {
+              delete cleanWeek.weekId;
+            }
+            
+            if (cleanWeek.days) {
+              cleanWeek.days = cleanWeek.days.map((day: any) => {
+                const cleanDay = { ...day };
+                // Remove temporary dayId if it exists
+                if (cleanDay.dayId && typeof cleanDay.dayId === 'string' && cleanDay.dayId.startsWith('day-')) {
+                  delete cleanDay.dayId;
+                }
+                
+                if (cleanDay.activities) {
+                  cleanDay.activities = cleanDay.activities.map((activity: any) => {
+                    const cleanActivity = { ...activity };
+                    // Remove temporary activityId if it exists
+                    if (cleanActivity.activityId && typeof cleanActivity.activityId === 'string' && cleanActivity.activityId.startsWith('activity-')) {
+                      delete cleanActivity.activityId;
+                    }
+                    // Handle populated templateId - extract just the ID if it's an object
+                    if (cleanActivity.templateId && typeof cleanActivity.templateId === 'object') {
+                      cleanActivity.templateId = cleanActivity.templateId._id || cleanActivity.templateId.id;
+                    }
+                    return cleanActivity;
+                  });
+                }
+                
+                return cleanDay;
+              });
+            }
+            
+            return cleanWeek;
+          });
+        }
+        
+        return cleanBlock;
+      });
+
       // Validate program structure
       const programData = {
         ...existingProgram.toObject(),
         ...updateData,
-        blocks
+        blocks: cleanBlocks
       };
 
       const structureErrors = (WorkoutProgram as any).validateStructure(programData);
@@ -373,7 +473,7 @@ export const updateWorkoutProgram = async (req: AuthRequest, res: Response) => {
 
       // Validate activity template references
       const templateIds = new Set<string>();
-      blocks.forEach((block: any) => {
+      cleanBlocks.forEach((block: any) => {
         if (block.weeks) {
           block.weeks.forEach((week: any) => {
             if (week.days) {
@@ -409,7 +509,7 @@ export const updateWorkoutProgram = async (req: AuthRequest, res: Response) => {
         }
       }
 
-      updateData.blocks = blocks;
+      updateData.blocks = cleanBlocks;
     }
 
     // Increment version

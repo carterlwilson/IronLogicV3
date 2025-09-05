@@ -12,8 +12,9 @@ import {
   Text
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { type UpdateActivityData, type ActivityTemplate, type ActivityGroup } from '../../lib/activities-api';
-import type { BenchmarkTemplate } from '../../types/index';
+import { type UpdateActivityData } from '../../lib/activities-api';
+import { type ActivityTemplate, type ActivityGroup } from '../../types/activities'
+import type { BenchmarkTemplate } from '../../types/benchmarks';
 
 interface EditActivityModalProps {
   opened: boolean;
@@ -31,7 +32,7 @@ interface FormData {
   benchmarkTemplateId: string;
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description: string;
-  instructions: string;
+  notes: string;
 }
 
 
@@ -51,7 +52,7 @@ export function EditActivityModal({
       benchmarkTemplateId: '',
       type: 'primary lift',
       description: '',
-      instructions: '',
+      notes: '',
     },
     validate: {
       name: (value) => {
@@ -72,8 +73,8 @@ export function EditActivityModal({
         if (value && value.length > 500) return 'Description cannot exceed 500 characters';
         return null;
       },
-      instructions: (value) => {
-        if (value && value.length > 1000) return 'Instructions cannot exceed 1000 characters';
+      notes: (value) => {
+        if (value && value.length > 1000) return 'Notes cannot exceed 1000 characters';
         return null;
       }
     }
@@ -88,7 +89,7 @@ export function EditActivityModal({
         benchmarkTemplateId: String(activity.benchmarkTemplateId || ''),
         type: activity.type,
         description: activity.description || '',
-        instructions: activity.instructions || '',
+        notes: activity.notes || '',
       });
     }
   }, [activity]);
@@ -104,7 +105,7 @@ export function EditActivityModal({
       benchmarkTemplateId: values.benchmarkTemplateId || null,
       type: values.type,
       description: values.description.trim() || undefined,
-      instructions: values.instructions.trim() || undefined,
+      notes: values.notes.trim() || undefined,
     };
     
     const success = await onSubmit(activity._id, activityData);
@@ -199,13 +200,13 @@ export function EditActivityModal({
             {...form.getInputProps('description')}
           />
           
-          {/* Instructions */}
+          {/* Notes */}
           <Textarea
-            label="Instructions"
-            placeholder="Detailed instructions for performing the activity..."
+            label="Notes"
+            placeholder="Additional notes about the activity..."
             rows={4}
             disabled={false}
-            {...form.getInputProps('instructions')}
+            {...form.getInputProps('notes')}
           />
           
           

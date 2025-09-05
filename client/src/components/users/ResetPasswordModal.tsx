@@ -11,7 +11,7 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { IconKey } from '@tabler/icons-react';
-import { User } from '../../lib/users-api';
+import type { User } from '../../types/auth';
 
 interface ResetPasswordModalProps {
   opened: boolean;

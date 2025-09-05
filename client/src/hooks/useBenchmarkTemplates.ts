@@ -4,11 +4,11 @@ import { useState, useCallback } from 'react';
 import { notifications } from '@mantine/notifications';
 import { 
   benchmarkTemplatesApi, 
-  BenchmarkTemplate,
-  CreateBenchmarkTemplateData, 
-  UpdateBenchmarkTemplateData, 
-  BenchmarkTemplatesQueryParams 
+  type CreateBenchmarkTemplateData,
+  type UpdateBenchmarkTemplateData,
+  type BenchmarkTemplatesQueryParams
 } from '../lib/benchmark-templates-api';
+import { type BenchmarkTemplate } from "../types/benchmarks.ts";
 
 // Helper to generate temporary IDs for optimistic updates
 const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

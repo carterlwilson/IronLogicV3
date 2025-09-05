@@ -109,7 +109,7 @@ const getNavigationItems = (userType: string): NavigationItem[] => {
         ...baseItems,
         {
           icon: <IconUsers size="1.1rem" />,
-          label: 'My Gym Users',
+          label: 'Clients',
           href: '/gym/users',
         },
         {

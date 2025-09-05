@@ -2,13 +2,12 @@
 
 import { useState, useCallback } from 'react';
 import { notifications } from '@mantine/notifications';
+import type { ActivityTemplate, ActivityGroup } from '../types/activities';
 import { 
-  activitiesApi, 
-  ActivityTemplate, 
-  ActivityGroup,
-  CreateActivityData, 
-  UpdateActivityData, 
-  ActivitiesQueryParams 
+  activitiesApi,
+  type CreateActivityData,
+  type UpdateActivityData,
+  type ActivitiesQueryParams
 } from '../lib/activities-api';
 
 // Helper to generate temporary IDs for optimistic updates
@@ -18,20 +17,19 @@ const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).su
 const createOptimisticActivity = (activityData: CreateActivityData): ActivityTemplate => {
   const activity: ActivityTemplate = {
     _id: generateTempId(),
+    gymId: activityData.gymId && activityData.gymId !== 'global' ? activityData.gymId : null,
     name: activityData.name,
-    activityGroupId: activityData.activityGroupId,
     type: activityData.type,
     description: activityData.description,
-    instructions: activityData.instructions,
+    notes: activityData.notes,
+    activityGroupId: activityData.activityGroupId,
+    activityGroupName: 'Loading...', // Placeholder - will be updated when real data comes back
+    benchmarkTemplateId: activityData.benchmarkTemplateId || null,
+    benchmarkTemplateName: null, // Will be populated by server
     isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-
-  // Only add gymId if it's not global
-  if (activityData.gymId && activityData.gymId !== 'global') {
-    activity.gymId = activityData.gymId;
-  }
 
   return activity;
 };
@@ -81,7 +79,7 @@ export function useActivities(): UseActivitiesReturn {
       setError(null);
       
       const response = await activitiesApi.getActivities(params);
-      
+
       if (response.success) {
         setActivities(response.data.activities);
         setPagination(response.data.pagination);
@@ -109,7 +107,7 @@ export function useActivities(): UseActivitiesReturn {
       const response = await activitiesApi.getActivityGroups(gymId);
       
       if (response.success) {
-        setActivityGroups(response.data.activityGroups);
+        setActivityGroups(response.data.groups);
       } else {
         throw new Error('Failed to fetch activity groups');
       }
@@ -182,7 +180,7 @@ export function useActivities(): UseActivitiesReturn {
           ...(activityData.activityGroupId && { activityGroupId: activityData.activityGroupId }),
           ...(activityData.type && { type: activityData.type }),
           ...(activityData.description !== undefined && { description: activityData.description }),
-          ...(activityData.instructions !== undefined && { instructions: activityData.instructions }),
+          ...(activityData.notes !== undefined && { notes: activityData.notes }),
           updatedAt: new Date().toISOString()
         };
       }

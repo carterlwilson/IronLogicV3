@@ -22,11 +22,16 @@ import {
   IconTrash,
   IconCalendar,
   IconClock,
-  IconGripVertical
+  IconGripVertical,
+  IconBarbell,
+  IconRun,
+  IconClipboardCheck
 } from '@tabler/icons-react';
-import type { WorkoutProgram, ProgramBlock, ProgramWeek, ProgramDay } from '../../types/index';
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import type { WorkoutProgram, ProgramBlock, ProgramWeek, ProgramDay, ProgramActivity } from '../../types/index';
+import { useSortable, SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 interface DragDropContextProps {
   draggedItem: any;
@@ -41,6 +46,9 @@ interface ProgramStructureTreeProps {
   onRemoveWeek: (blockIndex: number, weekIndex: number) => void;
   onAddDay: (blockIndex: number, weekIndex: number, dayOfWeek: number) => void;
   onRemoveDay: (blockIndex: number, weekIndex: number, dayIndex: number) => void;
+  onAddActivity: (blockIndex: number, weekIndex: number, dayIndex: number) => void;
+  onRemoveActivity: (blockIndex: number, weekIndex: number, dayIndex: number, activityIndex: number) => void;
+  onReorderActivities: (blockIndex: number, weekIndex: number, dayIndex: number, oldIndex: number, newIndex: number) => void;
   dragProps?: DragDropContextProps;
 }
 
@@ -51,7 +59,10 @@ export function ProgramStructureTree({
   onAddWeek,
   onRemoveWeek,
   onAddDay,
-  onRemoveDay
+  onRemoveDay,
+  onAddActivity,
+  onRemoveActivity,
+  onReorderActivities
 }: ProgramStructureTreeProps) {
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
@@ -376,6 +387,115 @@ export function ProgramStructureTree({
     );
   }
 
+  // Helper function to get activity type icon
+  const getActivityTypeIcon = (type: string) => {
+    switch (type) {
+      case 'strength':
+        return <IconBarbell size="0.7rem" />;
+      case 'conditioning':
+        return <IconRun size="0.7rem" />;
+      case 'diagnostic':
+        return <IconClipboardCheck size="0.7rem" />;
+      default:
+        return <IconBarbell size="0.7rem" />;
+    }
+  };
+
+  // Sortable Activity Component
+  function SortableActivity({
+    activity,
+    activityIndex,
+    blockIndex,
+    weekIndex,
+    dayIndex
+  }: {
+    activity: ProgramActivity;
+    activityIndex: number;
+    blockIndex: number;
+    weekIndex: number;
+    dayIndex: number;
+  }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({
+      id: `activity-${activity.activityId}`,
+    });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <Card ref={setNodeRef} style={style} withBorder p="xs" bg="gray.0">
+        <Group justify="space-between" align="flex-start">
+          <Group gap="xs" align="flex-start">
+            <ActionIcon
+              {...attributes}
+              {...listeners}
+              variant="subtle"
+              size="xs"
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
+              <IconGripVertical size="0.6rem" />
+            </ActionIcon>
+            {getActivityTypeIcon(activity.type)}
+            <div style={{ flex: 1 }}>
+              <Text size="xs" fw={500}>
+                {activity.templateName}
+              </Text>
+              <Group gap="xs" mt="xs">
+                {activity.sets && activity.reps && (
+                  <Badge size="xs" variant="light" color="blue">
+                    {activity.sets}×{activity.reps}
+                  </Badge>
+                )}
+                {activity.intensityPercentage && (
+                  <Badge size="xs" variant="light" color="green">
+                    {activity.intensityPercentage}%
+                  </Badge>
+                )}
+                {activity.duration && (
+                  <Badge size="xs" variant="light" color="orange">
+                    {Math.floor(activity.duration / 60)}:{(activity.duration % 60).toString().padStart(2, '0')}
+                  </Badge>
+                )}
+                {activity.restPeriod && (
+                  <Badge size="xs" variant="light" color="gray">
+                    Rest: {activity.restPeriod}s
+                  </Badge>
+                )}
+              </Group>
+              {activity.notes && (
+                <Text size="xs" c="dimmed" mt="xs">
+                  {activity.notes}
+                </Text>
+              )}
+            </div>
+          </Group>
+          <ActionIcon
+            variant="subtle"
+            size="xs"
+            color="red"
+            onClick={() => {
+              if (window.confirm('Are you sure you want to remove this activity?')) {
+                onRemoveActivity(blockIndex, weekIndex, dayIndex, activityIndex);
+              }
+            }}
+          >
+            <IconTrash size="0.6rem" />
+          </ActionIcon>
+        </Group>
+      </Card>
+    );
+  }
+
   // Sortable Day Component
   function SortableDay({ 
     day, 
@@ -407,40 +527,105 @@ export function ProgramStructureTree({
 
     return (
       <Card ref={setNodeRef} style={style} withBorder p="xs" bg="white">
-        <Group justify="space-between">
-          <Group gap="xs">
-            <ActionIcon
-              {...attributes}
-              {...listeners}
-              variant="subtle"
-              size="xs"
-              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-            >
-              <IconGripVertical size="0.7rem" />
-            </ActionIcon>
-            <IconClock size="0.8rem" />
-            <div>
-              <Text size="xs" fw={500}>
-                {getDayName(day.dayOfWeek)}
-              </Text>
-              <Text size="xs" c="dimmed">
-                {day.activities.length} activities
-              </Text>
-            </div>
+        <Stack gap="xs">
+          {/* Day Header */}
+          <Group justify="space-between">
+            <Group gap="xs">
+              <ActionIcon
+                {...attributes}
+                {...listeners}
+                variant="subtle"
+                size="xs"
+                style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+              >
+                <IconGripVertical size="0.7rem" />
+              </ActionIcon>
+              <IconClock size="0.8rem" />
+              <div>
+                <Text size="xs" fw={500}>
+                  {getDayName(day.dayOfWeek)}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {day.activities?.length || 0} activities
+                </Text>
+              </div>
+            </Group>
+            <Group gap="xs">
+              <Button
+                size="xs"
+                variant="light"
+                leftSection={<IconPlus size="0.6rem" />}
+                onClick={() => onAddActivity(blockIndex, weekIndex, dayIndex)}
+              >
+                Add Activity
+              </Button>
+              <ActionIcon
+                variant="subtle"
+                size="xs"
+                color="red"
+                onClick={() => {
+                  if (window.confirm('Are you sure you want to delete this day?')) {
+                    onRemoveDay(blockIndex, weekIndex, dayIndex);
+                  }
+                }}
+              >
+                <IconTrash size="0.7rem" />
+              </ActionIcon>
+            </Group>
           </Group>
-          <ActionIcon
-            variant="subtle"
-            size="xs"
-            color="red"
-            onClick={() => {
-              if (window.confirm('Are you sure you want to delete this day?')) {
-                onRemoveDay(blockIndex, weekIndex, dayIndex);
-              }
-            }}
-          >
-            <IconTrash size="0.7rem" />
-          </ActionIcon>
-        </Group>
+
+          {/* Activities List with Drag and Drop */}
+          {day.activities && day.activities.length > 0 && (
+            <div style={{ marginLeft: 16 }}>
+              <DndContext
+                sensors={useSensors(
+                  useSensor(PointerSensor),
+                  useSensor(KeyboardSensor, {
+                    coordinateGetter: sortableKeyboardCoordinates,
+                  })
+                )}
+                collisionDetection={closestCenter}
+                onDragEnd={(event: DragEndEvent) => {
+                  const { active, over } = event;
+                  
+                  if (active.id !== over?.id) {
+                    const oldIndex = day.activities.findIndex(activity => `activity-${activity.activityId}` === active.id);
+                    const newIndex = day.activities.findIndex(activity => `activity-${activity.activityId}` === over?.id);
+                    
+                    if (oldIndex !== -1 && newIndex !== -1) {
+                      onReorderActivities(blockIndex, weekIndex, dayIndex, oldIndex, newIndex);
+                    }
+                  }
+                }}
+              >
+                <SortableContext
+                  items={day.activities.map(activity => `activity-${activity.activityId}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <Stack gap="xs">
+                    {day.activities.map((activity, activityIndex) => (
+                      <SortableActivity
+                        key={activity.activityId}
+                        activity={activity}
+                        activityIndex={activityIndex}
+                        blockIndex={blockIndex}
+                        weekIndex={weekIndex}
+                        dayIndex={dayIndex}
+                      />
+                    ))}
+                  </Stack>
+                </SortableContext>
+              </DndContext>
+            </div>
+          )}
+
+          {/* Empty state for no activities */}
+          {(!day.activities || day.activities.length === 0) && (
+            <Text size="xs" c="dimmed" ta="center" p="md">
+              No activities added yet. Click "Add Activity" to get started.
+            </Text>
+          )}
+        </Stack>
       </Card>
     );
   }

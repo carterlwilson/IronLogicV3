@@ -19,7 +19,7 @@ export interface CreateActivityData {
   benchmarkTemplateId?: string | null; // ID of the benchmark template for intensity calculations
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string | undefined;
-  instructions?: string | undefined;
+  notes?: string | undefined;
 }
 
 export interface UpdateActivityData {
@@ -28,7 +28,7 @@ export interface UpdateActivityData {
   benchmarkTemplateId?: string | null; // ID of the benchmark template for intensity calculations
   type?: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description?: string | undefined;
-  instructions?: string | undefined;
+  notes?: string | undefined;
 }
 
 export interface ActivitiesListResponse {

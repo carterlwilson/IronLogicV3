@@ -19,7 +19,6 @@ import {
 } from '@mantine/core';
 import {
   IconDeviceFloppy,
-  IconX,
   IconPlus,
   IconSettings,
   IconEye,
@@ -27,18 +26,17 @@ import {
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import type { WorkoutProgram, ProgramBlock, ProgramWeek, ProgramDay } from '../../types/index';
+import type { WorkoutProgram, ProgramBlock, ProgramWeek, ProgramDay, ProgramActivity } from '../../types/index';
 import { useWorkoutPrograms } from '../../hooks/useWorkoutPrograms';
 import { ProgramMetadataForm } from './ProgramMetadataForm';
 import { ProgramStructureTree } from './ProgramStructureTree';
 import { DragDropProgramBuilder } from './DragDropProgramBuilder';
-import Link from 'react-router-dom';
+import { ActivityAssignmentModal } from './ActivityAssignmentModal';
+import { Link } from 'react-router-dom';
 
-interface ProgramBuilderProps {}
-
-export function ProgramBuilder({}: ProgramBuilderProps) {
+export function ProgramBuilder() {
   const navigate = useNavigate();
-  const searchParams = useSearchParams();
+  const [searchParams] = useSearchParams();
   const programId = searchParams.get('id');
   
   const { getProgram, createProgram, updateProgram } = useWorkoutPrograms();
@@ -48,6 +46,13 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [previewOpened, { open: openPreview, close: closePreview }] = useDisclosure(false);
+  const [activityModalOpened, { open: openActivityModal, close: closeActivityModal }] = useDisclosure(false);
+  const [selectedDayForActivity, setSelectedDayForActivity] = useState<{
+    blockIndex: number;
+    weekIndex: number;
+    dayIndex: number;
+    day: ProgramDay;
+  } | null>(null);
 
   // Load existing program if ID is provided
   useEffect(() => {
@@ -74,6 +79,7 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
         navigate('/programs');
       }
     } catch (error) {
+        console.error(error);
       notifications.show({
         title: 'Error',
         message: 'Failed to load program',
@@ -255,13 +261,118 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
     setHasChanges(true);
   }, [program]);
 
+  const handleAddActivity = useCallback((blockIndex: number, weekIndex: number, dayIndex: number) => {
+    if (!program) return;
+    
+    const day = program.blocks[blockIndex]?.weeks[weekIndex]?.days[dayIndex];
+    if (!day) return;
+    
+    setSelectedDayForActivity({ blockIndex, weekIndex, dayIndex, day });
+    openActivityModal();
+  }, [program, openActivityModal]);
+
+  const addActivityToDay = useCallback((activity: ProgramActivity) => {
+    if (!program || !selectedDayForActivity) return;
+    
+    const { blockIndex, weekIndex, dayIndex } = selectedDayForActivity;
+    
+    setProgram(prev => prev ? {
+      ...prev,
+      blocks: prev.blocks.map((block, bIndex) => 
+        bIndex === blockIndex ? {
+          ...block,
+          weeks: block.weeks.map((week, wIndex) => 
+            wIndex === weekIndex ? {
+              ...week,
+              days: week.days.map((day, dIndex) => 
+                dIndex === dayIndex ? {
+                  ...day,
+                  activities: [...(day.activities || []), activity]
+                } : day
+              )
+            } : week
+          )
+        } : block
+      ),
+      updatedAt: new Date()
+    } : prev);
+    setHasChanges(true);
+  }, [program, selectedDayForActivity]);
+
+  const removeActivity = useCallback((blockIndex: number, weekIndex: number, dayIndex: number, activityIndex: number) => {
+    if (!program) return;
+    
+    setProgram(prev => prev ? {
+      ...prev,
+      blocks: prev.blocks.map((block, bIndex) => 
+        bIndex === blockIndex ? {
+          ...block,
+          weeks: block.weeks.map((week, wIndex) => 
+            wIndex === weekIndex ? {
+              ...week,
+              days: week.days.map((day, dIndex) => 
+                dIndex === dayIndex ? {
+                  ...day,
+                  activities: (day.activities || []).filter((_, aIndex) => aIndex !== activityIndex)
+                } : day
+              )
+            } : week
+          )
+        } : block
+      ),
+      updatedAt: new Date()
+    } : prev);
+    setHasChanges(true);
+  }, [program]);
+
+  const reorderActivities = useCallback((blockIndex: number, weekIndex: number, dayIndex: number, oldIndex: number, newIndex: number) => {
+    if (!program) return;
+    
+    setProgram(prev => prev ? {
+      ...prev,
+      blocks: prev.blocks.map((block, bIndex) => 
+        bIndex === blockIndex ? {
+          ...block,
+          weeks: block.weeks.map((week, wIndex) => 
+            wIndex === weekIndex ? {
+              ...week,
+              days: week.days.map((day, dIndex) => 
+                dIndex === dayIndex ? {
+                  ...day,
+                  activities: (() => {
+                    // Reorder the activities array
+                    const reorderedActivities = [...day.activities];
+                    const [movedActivity] = reorderedActivities.splice(oldIndex, 1);
+                    reorderedActivities.splice(newIndex, 0, movedActivity);
+                    
+                    // Update orderIndex values based on new positions
+                    return reorderedActivities.map((activity, index) => ({
+                      ...activity,
+                      orderIndex: index
+                    }));
+                  })()
+                } : day
+              )
+            } : week
+          )
+        } : block
+      ),
+      updatedAt: new Date()
+    } : prev);
+    setHasChanges(true);
+  }, [program]);
+
   const calculateDurationWeeks = useCallback(() => {
     if (!program) return 0;
     return program.blocks.reduce((total, block) => total + block.weeks.length, 0);
   }, [program]);
 
   const handleSave = async () => {
-    if (!program) return;
+    console.log('handleSave called', { program: !!program, hasChanges, saving });
+    if (!program) {
+      console.log('No program, returning early');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -270,12 +381,22 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
         durationWeeks: calculateDurationWeeks()
       };
 
+      console.log('Program data to save:', { 
+        id: program._id, 
+        isNew: program._id.toString() === 'new',
+        programData 
+      });
+
       let success = false;
       if (program._id.toString() === 'new') {
+        console.log('Creating new program...');
         success = await createProgram(programData);
       } else {
+        console.log('Updating existing program...');
         success = await updateProgram(program._id.toString(), programData);
       }
+      
+      console.log('Save result:', success);
 
       if (success) {
         setHasChanges(false);
@@ -290,6 +411,7 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
         }
       }
     } catch (error) {
+        console.log(error);
       notifications.show({
         title: 'Error',
         message: 'Failed to save program',
@@ -329,7 +451,7 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
       <Center h={400}>
         <Stack align="center" gap="md">
           <Text size="lg">Program not found</Text>
-          <Button component={Link} href="/programs">
+          <Button component={Link} to="/programs">
             Back to Programs
           </Button>
         </Stack>
@@ -346,7 +468,7 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
             variant="subtle" 
             size="lg"
             component={Link}
-            href="/programs"
+            to="/programs"
           >
             <IconChevronLeft size="1.2rem" />
           </ActionIcon>
@@ -384,7 +506,10 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
           </Button>
           <Button
             leftSection={<IconDeviceFloppy size="1rem" />}
-            onClick={handleSave}
+            onClick={(e) => {
+              console.log('Save button clicked', { hasChanges, saving, disabled: !hasChanges });
+              handleSave();
+            }}
             loading={saving}
             disabled={!hasChanges}
           >
@@ -491,6 +616,9 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
                         onRemoveWeek={removeWeek}
                         onAddDay={addDay}
                         onRemoveDay={removeDay}
+                        onAddActivity={handleAddActivity}
+                        onRemoveActivity={removeActivity}
+                        onReorderActivities={reorderActivities}
                         dragProps={dragProps}
                       />
                     )}
@@ -539,6 +667,20 @@ export function ProgramBuilder({}: ProgramBuilderProps) {
           </div>
         </Stack>
       </Modal>
+
+      {/* Activity Assignment Modal */}
+      {selectedDayForActivity && (
+        <ActivityAssignmentModal
+          opened={activityModalOpened}
+          onClose={() => {
+            closeActivityModal();
+            setSelectedDayForActivity(null);
+          }}
+          programDay={selectedDayForActivity.day}
+          onAddActivity={addActivityToDay}
+          gymId={program.gymId || ''}
+        />
+      )}
     </Stack>
   );
 }

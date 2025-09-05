@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import {
   Modal,
   TextInput,
@@ -14,7 +13,7 @@ import {
 import { useForm } from '@mantine/form';
 import { type CreateActivityData } from '../../lib/activities-api';
 import { type ActivityGroup } from '../../lib/activity-groups-api';
-import type { BenchmarkTemplate } from '../../types/index';
+import type { BenchmarkTemplate } from '../../types/benchmarks';
 import { useAuth } from '../../lib/auth-context';
 
 interface AddActivityModalProps {
@@ -34,7 +33,7 @@ interface FormData {
   benchmarkTemplateId: string;
   type: 'primary lift' | 'accessory lift' | 'conditioning' | 'diagnostic';
   description: string;
-  instructions: string;
+  notes: string;
 }
 
 
@@ -57,7 +56,7 @@ export function AddActivityModal({
       benchmarkTemplateId: '',
       type: 'primary lift',
       description: '',
-      instructions: '',
+      notes: '',
     },
     validate: {
       name: (value) => {
@@ -66,7 +65,7 @@ export function AddActivityModal({
         return null;
       },
       activityGroupId: (value) => {
-        if (!value.trim()) return 'Activity group is required';
+        // Activity group is optional
         return null;
       },
       type: (value) => {
@@ -77,8 +76,8 @@ export function AddActivityModal({
         if (value && value.length > 500) return 'Description cannot exceed 500 characters';
         return null;
       },
-      instructions: (value) => {
-        if (value && value.length > 1000) return 'Instructions cannot exceed 1000 characters';
+      notes: (value) => {
+        if (value && value.length > 1000) return 'Notes cannot exceed 1000 characters';
         return null;
       }
     }
@@ -90,11 +89,11 @@ export function AddActivityModal({
     // Convert form data to API format
     const activityData: CreateActivityData = {
       name: values.name.trim(),
-      activityGroupId: values.activityGroupId,
+      activityGroupId: values.activityGroupId || null,
       benchmarkTemplateId: values.benchmarkTemplateId || null,
       type: values.type,
       description: values.description.trim() || undefined,
-      instructions: values.instructions.trim() || undefined,
+      notes: values.notes.trim() || undefined,
     };
 
     // Always include gymId for gym-scoped activities
@@ -146,20 +145,20 @@ export function AddActivityModal({
           
           {/* Activity Group */}
           <Select
-            label="Activity Group"
+            label="Activity Group (Optional)"
             placeholder="Select an activity group"
             data={activityGroups.map(group => ({
               value: group._id,
               label: `${group.name} (${group.count} activities)`
             }))}
-            required
             {...form.getInputProps('activityGroupId')}
-            description={activityGroups.length > 0 ? "Select an existing activity group" : "No activity groups available. Create one first."}
+            description="Select an existing activity group or leave blank to create without a group"
+            clearable
           />
           
           {activityGroups.length === 0 && (
-            <Text size="xs" c="orange">
-              You need to create activity groups first before adding activities.
+            <Text size="xs" c="dimmed">
+              No activity groups available. You can create the activity without a group or create activity groups first.
             </Text>
           )}
           
@@ -198,12 +197,12 @@ export function AddActivityModal({
             {...form.getInputProps('description')}
           />
           
-          {/* Instructions */}
+          {/* Notes */}
           <Textarea
-            label="Instructions"
-            placeholder="Detailed instructions for performing the activity..."
+            label="Notes"
+            placeholder="Additional notes about the activity..."
             rows={4}
-            {...form.getInputProps('instructions')}
+            {...form.getInputProps('notes')}
           />
           
           

@@ -10,7 +10,7 @@ import {
   Alert
 } from '@mantine/core';
 import { IconAlertTriangle } from '@tabler/icons-react';
-import { type ActivityTemplate } from '../../lib/activities-api';
+import { type ActivityTemplate } from '../../types/activities';
 
 interface DeleteActivityModalProps {
   opened: boolean;
@@ -79,7 +79,7 @@ export function DeleteActivityModal({
 
           <Group gap="xs">
             <Text size="sm" c="dimmed">Group:</Text>
-            <Text size="sm">{activity.activityGroup?.name || 'Unknown'}</Text>
+            <Text size="sm">{activity.activityGroupName || 'Unknown'}</Text>
           </Group>
 
           <Group gap="xs">

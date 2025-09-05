@@ -1,4 +1,4 @@
-# IronLogic3 Migration Plan: Next.js → Vite + React Router
+rem# IronLogic3 Migration Plan: Next.js → Vite + React Router
 
 ## Overview
 

@@ -78,7 +78,7 @@ export function ActivitiesTable({
   // Extract unique options from activities
   const filterOptions = useMemo(() => {
     return {
-      groups: activityGroups.map(group => ({ value: group._id, label: `${group.name} (${group.count} activities)` }))
+      groups: (activityGroups || []).map(group => ({ value: group._id, label: `${group.name} (${group.count} activities)` }))
     };
   }, [activityGroups]);
   
@@ -235,7 +235,7 @@ export function ActivitiesTable({
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {activities.map((activity, index) => (
+              {(activities || []).map((activity, index) => (
                 <Table.Tr key={activity._id || `activity-${index}`}>
                   <Table.Td>
                     <div>

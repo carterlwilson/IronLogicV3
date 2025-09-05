@@ -4,7 +4,6 @@ import {
   Table,
   Card,
   Stack,
-  Group,
   Text,
   Badge,
   ActionIcon,
@@ -85,7 +84,7 @@ export function ActivityGroupsTable({
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {activityGroups.map((group) => (
+            {(activityGroups || []).map((group) => (
               <Table.Tr key={group._id}>
                 <Table.Td>
                   <div>

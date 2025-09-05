@@ -5,7 +5,11 @@ export interface User {
   email: string;
   name: string;
   userType: UserType;
-  gymId: string | null;
+  gymId?: {
+    _id: string;
+    name: string;
+    location: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
   isActive: boolean;

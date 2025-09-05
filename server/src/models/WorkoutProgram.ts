@@ -4,6 +4,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 interface ProgramActivity {
   activityId: Types.ObjectId;
   templateId: Types.ObjectId; // reference to ActivityTemplate
+  templateName: string; // name of the activity template
   orderIndex: number;
   // Activity parameters
   sets?: number;
@@ -76,12 +77,15 @@ export interface WorkoutProgram extends Document {
 const activitySchema = new Schema<ProgramActivity>({
   activityId: {
     type: Schema.Types.ObjectId,
-    default: () => new Types.ObjectId(),
-    required: true
+    default: () => new Types.ObjectId()
   },
   templateId: {
     type: Schema.Types.ObjectId,
     ref: 'ActivityTemplate',
+    required: true
+  },
+  templateName: {
+    type: String,
     required: true
   },
   orderIndex: {
@@ -133,13 +137,8 @@ const activitySchema = new Schema<ProgramActivity>({
   // For conditioning activities
   duration: {
     type: Number,
-    min: 0,
-    validate: {
-      validator: function(this: ProgramActivity, value: number) {
-        return this.type === 'conditioning' ? value > 0 : true;
-      },
-      message: 'Duration required for conditioning activities'
-    }
+    min: 0
+    // No validation - duration is optional for all activity types
   },
   distance: {
     type: Number,
@@ -158,8 +157,7 @@ const activitySchema = new Schema<ProgramActivity>({
 const daySchema = new Schema<ProgramDay>({
   dayId: {
     type: Schema.Types.ObjectId,
-    default: () => new Types.ObjectId(),
-    required: true
+    default: () => new Types.ObjectId()
   },
   dayOfWeek: {
     type: Number,
@@ -195,8 +193,7 @@ const volumeTargetSchema = new Schema<VolumeTarget>({
 const weekSchema = new Schema<ProgramWeek>({
   weekId: {
     type: Schema.Types.ObjectId,
-    default: () => new Types.ObjectId(),
-    required: true
+    default: () => new Types.ObjectId()
   },
   weekNumber: {
     type: Number,
@@ -216,8 +213,7 @@ const weekSchema = new Schema<ProgramWeek>({
 const blockSchema = new Schema<ProgramBlock>({
   blockId: {
     type: Schema.Types.ObjectId,
-    default: () => new Types.ObjectId(),
-    required: true
+    default: () => new Types.ObjectId()
   },
   name: {
     type: String,
@@ -260,7 +256,6 @@ const workoutProgramSchema = new Schema<WorkoutProgram>({
   blocks: [blockSchema],
   durationWeeks: {
     type: Number,
-    required: true,
     min: 1,
     max: 104 // max 2 years
   },
