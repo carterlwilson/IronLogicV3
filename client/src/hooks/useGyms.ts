@@ -5,11 +5,11 @@ import { notifications } from '@mantine/notifications';
 import { 
   gymsApi, 
   gymOwnersApi,
-  Gym, 
-  CreateGymData, 
-  UpdateGymData, 
-  GymsQueryParams,
-  GymOwner 
+  type Gym,
+  type CreateGymData,
+  type UpdateGymData,
+  type GymsQueryParams,
+  type GymOwner
 } from '../lib/gyms-api';
 
 // Helper to generate temporary IDs for optimistic updates

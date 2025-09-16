@@ -20,7 +20,7 @@ import { type User } from '../../types/auth';
 interface EditUserModalProps {
   opened: boolean;
   onClose: () => void;
-  onSubmit: (id: string, userData: UpdateUserData) => Promise<boolean>;
+  onSubmit: (userData: UpdateUserData) => Promise<boolean>;
   user: User | null;
   gymOptions: { value: string; label: string }[];
   loading?: boolean;
@@ -123,7 +123,7 @@ export function EditUserModal({
       };
     }
 
-    const success = await onSubmit(user._id, userData);
+    const success = await onSubmit(userData);
     if (success) {
       onClose();
     }

@@ -11,10 +11,11 @@ import { GymsPage } from './pages/GymsPage'
 import { ActivitiesPage } from './pages/activities/ActivitiesPage.tsx'
 import { ActivityGroupsPage } from './pages/activity-groups/ActivityGroupsPage.tsx'
 import { BenchmarkTemplatesPage } from './pages/benchmark-templates/BenchmarkTemplatesPage.tsx'
+import { SchedulesPage } from './pages/schedules/SchedulesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MobilePage } from './pages/MobilePage'
-import { ProtectedRoute } from './components/auth/ProtectedRoute'
+import { ProtectedRoute, AdminOnly, GymOwnerOnly, CoachOnly, ClientOnly } from './components/auth/ProtectedRoute'
 
 export function AppRoutes() {
   return (
@@ -28,15 +29,28 @@ export function AppRoutes() {
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/programs" element={<ProtectedRoute><ProgramsPage /></ProtectedRoute>} />
-      <Route path="/programs/builder" element={<ProtectedRoute><ProgramBuilderPage /></ProtectedRoute>} />
-      <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
-      <Route path="/gyms" element={<ProtectedRoute><GymsPage /></ProtectedRoute>} />
-      <Route path="/activities" element={<ProtectedRoute><ActivitiesPage /></ProtectedRoute>} />
-      <Route path="/activity-groups" element={<ProtectedRoute><ActivityGroupsPage /></ProtectedRoute>} />
-      <Route path="/benchmark-templates" element={<ProtectedRoute><BenchmarkTemplatesPage /></ProtectedRoute>} />
+      
+      {/* Admin-only routes */}
+      <Route path="/users" element={<AdminOnly><UsersPage /></AdminOnly>} />
+      <Route path="/gyms" element={<AdminOnly><GymsPage /></AdminOnly>} />
+      
+      {/* Gym Owner, Coach, and Admin routes (gym-specific content) */}
+      <Route path="/programs" element={<GymOwnerOnly><ProgramsPage /></GymOwnerOnly>} />
+      <Route path="/programs/builder" element={<GymOwnerOnly><ProgramBuilderPage /></GymOwnerOnly>} />
+      <Route path="/activities" element={<GymOwnerOnly><ActivitiesPage /></GymOwnerOnly>} />
+      <Route path="/activity-groups" element={<GymOwnerOnly><ActivityGroupsPage /></GymOwnerOnly>} />
+      <Route path="/benchmark-templates" element={<GymOwnerOnly><BenchmarkTemplatesPage /></GymOwnerOnly>} />
+      <Route path="/schedules" element={<GymOwnerOnly><SchedulesPage /></GymOwnerOnly>} />
+      
+      {/* Legacy redirects */}
+      <Route path="/schedule-templates" element={<Navigate to="/schedules?tab=templates" replace />} />
+      <Route path="/weekly-schedules" element={<Navigate to="/schedules?tab=schedules" replace />} />
+      
+      {/* Common routes */}
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-      <Route path="/mobile" element={<ProtectedRoute><MobilePage /></ProtectedRoute>} />
+      
+      {/* Mobile interface for clients */}
+      <Route path="/mobile" element={<ClientOnly><MobilePage /></ClientOnly>} />
       
       {/* Redirects */}
       <Route path="*" element={<Navigate to="/" replace />} />

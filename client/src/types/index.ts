@@ -151,33 +151,9 @@ export interface ClientBenchmark {
   recordedBy: string;
 }
 
-// Schedule Template types
-export interface ScheduleTemplate {
-  _id: string;
-  gymId: string;
-  name: string;
-  description?: string;
-  isDefault: boolean;
-  timeslots: TemplateTimeslot[];
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  createdBy: string;
-  // Virtual fields
-  totalTimeslots?: number;
-  totalCoaches?: number;
-}
-
-export interface TemplateTimeslot {
-  timeslotId: string;
-  dayOfWeek: number; // 1-7 (Monday-Sunday)
-  startTime: string; // "09:00" format
-  endTime: string;   // "10:00" format
-  locationId: string;
-  coachId: string;
-  programId?: string;
-  maxCapacity: number;
-  className?: string;
+export interface ClientEnrollment {
+  clientId: string;
+  enrolledAt: string;
+  status: 'enrolled' | 'cancelled' | 'completed' | 'no-show';
   notes?: string;
-  isActive: boolean;
 }

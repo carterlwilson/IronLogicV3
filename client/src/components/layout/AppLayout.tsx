@@ -68,36 +68,6 @@ const getNavigationItems = (userType: string): NavigationItem[] => {
           href: '/gyms',
         },
         {
-          icon: <IconActivity size="1.1rem" />,
-          label: 'Activities',
-          href: '/activities',
-        },
-        {
-          icon: <IconBarbell size="1.1rem" />,
-          label: 'Activity Groups',
-          href: '/activity-groups',
-        },
-        {
-          icon: <IconTrophy size="1.1rem" />,
-          label: 'Benchmark Templates',
-          href: '/benchmark-templates',
-        },
-        {
-          icon: <IconBarbell size="1.1rem" />,
-          label: 'Programs',
-          href: '/programs',
-        },
-        {
-          icon: <IconCalendarEvent size="1.1rem" />,
-          label: 'Schedules',
-          href: '/schedules',
-        },
-        {
-          icon: <IconTrophy size="1.1rem" />,
-          label: 'Benchmarks',
-          href: '/benchmarks',
-        },
-        {
           icon: <IconSettings size="1.1rem" />,
           label: 'Settings',
           href: '/settings',
