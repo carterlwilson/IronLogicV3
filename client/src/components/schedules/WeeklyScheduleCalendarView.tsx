@@ -7,6 +7,10 @@ interface WeeklyScheduleCalendarViewProps {
   schedule: WeeklySchedule;
   onViewTimeslot: (timeslot: WeeklyTimeslot) => void;
   onEditSchedule?: () => void;
+  onAddTimeslot?: (dayOfWeek: number) => void;
+  onEditTimeslot?: (timeslot: WeeklyTimeslot) => void;
+  onDeleteTimeslot?: (timeslot: WeeklyTimeslot) => void;
+  canManageTimeslots?: boolean;
   loading?: boolean;
 }
 
@@ -14,6 +18,10 @@ export function WeeklyScheduleCalendarView({
   schedule,
   onViewTimeslot,
   onEditSchedule,
+  onAddTimeslot,
+  onEditTimeslot,
+  onDeleteTimeslot,
+  canManageTimeslots = false,
   loading = false
 }: WeeklyScheduleCalendarViewProps) {
   // Group timeslots by day of week (1=Monday, 7=Sunday)
@@ -42,6 +50,16 @@ export function WeeklyScheduleCalendarView({
   const handleTimeslotAction = (action: 'edit' | 'delete' | 'view', timeslot: WeeklyTimeslot) => {
     if (action === 'view') {
       onViewTimeslot(timeslot);
+    } else if (action === 'edit' && onEditTimeslot) {
+      onEditTimeslot(timeslot);
+    } else if (action === 'delete' && onDeleteTimeslot) {
+      onDeleteTimeslot(timeslot);
+    }
+  };
+
+  const handleAddTimeslotForDay = (dayOfWeek: number) => {
+    if (onAddTimeslot) {
+      onAddTimeslot(dayOfWeek);
     }
   };
 
@@ -122,8 +140,10 @@ export function WeeklyScheduleCalendarView({
                   dayOfWeek={dayOfWeek}
                   timeslots={timeslotsByDay[dayOfWeek] || []}
                   mode="schedule"
+                  onAddTimeslot={() => handleAddTimeslotForDay(dayOfWeek)}
                   onTimeslotAction={handleTimeslotAction}
                   enrollmentData={enrollmentData}
+                  canManageTimeslots={canManageTimeslots}
                 />
               </Grid.Col>
             ))}

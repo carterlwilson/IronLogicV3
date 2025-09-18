@@ -21,6 +21,7 @@ export interface CreateWeeklyScheduleData {
 export interface UpdateWeeklyScheduleData {
   notes?: string;
   status?: 'draft' | 'published' | 'active' | 'completed' | 'cancelled';
+  assignedCoachId?: string;
   timeslots?: Array<{
     timeslotId: string;
     dayOfWeek: number;

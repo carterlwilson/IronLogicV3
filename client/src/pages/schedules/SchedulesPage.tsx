@@ -8,12 +8,14 @@ import {
   Tabs,
   Card,
   Button,
-  Select
+  Select,
+  Menu,
+  ActionIcon
 } from '@mantine/core';
 import {
     IconPlus,
     IconCalendar,
-    IconTemplate, IconChevronRight
+    IconTemplate, IconChevronRight, IconEdit, IconTrash, IconDots
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { AppLayout } from '../../components/layout/AppLayout';
@@ -23,6 +25,8 @@ import { ScheduleTemplateModal } from '../../components/schedules/ScheduleTempla
 import { CreateWeeklyScheduleModal } from '../../components/schedules/CreateWeeklyScheduleModal';
 import { TimeslotModal } from '../../components/schedules/TimeslotModal';
 import { TimeslotEnrollmentModal } from '../../components/schedules/TimeslotEnrollmentModal';
+import { EditWeeklyScheduleModal } from '../../components/schedules/EditWeeklyScheduleModal';
+import { WeeklyTimeslotModal } from '../../components/schedules/WeeklyTimeslotModal';
 import { useScheduleTemplates } from '../../hooks/useScheduleTemplates';
 import { useWeeklySchedules } from '../../hooks/useWeeklySchedules';
 import type { ScheduleTemplate, WeeklySchedule, TemplateTimeslot, WeeklyTimeslot } from '../../types/schedules';
@@ -71,6 +75,11 @@ export function SchedulesPage() {
   const [selectedTimeslot, setSelectedTimeslot] = useState<WeeklyTimeslot | null>(null);
   const [timeslotDayOfWeek, setTimeslotDayOfWeek] = useState(1);
   const [showStatsTab, setShowStatsTab] = useState(false);
+  const [editScheduleModalOpen, setEditScheduleModalOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<WeeklySchedule | null>(null);
+  const [weeklyTimeslotModalOpen, setWeeklyTimeslotModalOpen] = useState(false);
+  const [editingWeeklyTimeslot, setEditingWeeklyTimeslot] = useState<WeeklyTimeslot | null>(null);
+  const [weeklyTimeslotDayOfWeek, setWeeklyTimeslotDayOfWeek] = useState(1);
 
 
   // Load data on mount
@@ -184,6 +193,147 @@ export function SchedulesPage() {
       });
     }
   };
+
+  // Edit schedule handlers
+  const handleEditSchedule = (schedule: WeeklySchedule) => {
+    setEditingSchedule(schedule);
+    setEditScheduleModalOpen(true);
+  };
+
+  const handleUpdateSchedule = async (scheduleData: any) => {
+    try {
+      if (editingSchedule) {
+        const updatedSchedule = await updateWeeklySchedule(editingSchedule._id, scheduleData);
+
+        // Update selected schedule if it's the one being edited
+        if (selectedWeeklySchedule?._id === editingSchedule._id) {
+          setSelectedWeeklySchedule(updatedSchedule);
+        }
+
+        notifications.show({
+          title: 'Success',
+          message: 'Schedule updated successfully',
+          color: 'green',
+        });
+        setEditScheduleModalOpen(false);
+        setEditingSchedule(null);
+      }
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to update schedule',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleDeleteSchedule = async (schedule: WeeklySchedule) => {
+    try {
+      await deleteWeeklySchedule(schedule._id);
+
+      // Clear selection if deleted schedule was selected
+      if (selectedWeeklySchedule?._id === schedule._id) {
+        setSelectedWeeklySchedule(null);
+      }
+
+      notifications.show({
+        title: 'Success',
+        message: 'Schedule deleted successfully',
+        color: 'green',
+      });
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete schedule',
+        color: 'red',
+      });
+    }
+  };
+
+  // Weekly Schedule Timeslot handlers
+  const handleAddWeeklyTimeslot = (dayOfWeek: number) => {
+    setWeeklyTimeslotDayOfWeek(dayOfWeek);
+    setEditingWeeklyTimeslot(null);
+    setWeeklyTimeslotModalOpen(true);
+  };
+
+  const handleEditWeeklyTimeslot = (timeslot: WeeklyTimeslot) => {
+    setEditingWeeklyTimeslot(timeslot);
+    setWeeklyTimeslotDayOfWeek(timeslot.dayOfWeek);
+    setWeeklyTimeslotModalOpen(true);
+  };
+
+  const handleSaveWeeklyTimeslot = async (timeslotData: any) => {
+    try {
+      if (selectedWeeklySchedule) {
+        const updatedTimeslots = editingWeeklyTimeslot
+          ? selectedWeeklySchedule.timeslots.map(slot =>
+              slot.timeslotId === editingWeeklyTimeslot.timeslotId
+                ? { ...slot, ...timeslotData }
+                : slot
+            )
+          : [...selectedWeeklySchedule.timeslots, {
+              timeslotId: `new-${Date.now()}`,
+              templateTimeslotId: `new-${Date.now()}`,
+              enrollments: [],
+              ...timeslotData
+            }];
+
+        const updatedSchedule = await updateWeeklySchedule(selectedWeeklySchedule._id, {
+          timeslots: updatedTimeslots
+        });
+
+        // Update the selected schedule with the server response
+        setSelectedWeeklySchedule(updatedSchedule);
+
+        notifications.show({
+          title: 'Success',
+          message: editingWeeklyTimeslot ? 'Timeslot updated successfully' : 'Timeslot added successfully',
+          color: 'green',
+        });
+        setWeeklyTimeslotModalOpen(false);
+        setEditingWeeklyTimeslot(null);
+      }
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to save timeslot',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleDeleteWeeklyTimeslot = async (timeslot: WeeklyTimeslot) => {
+    try {
+      if (selectedWeeklySchedule) {
+        const updatedTimeslots = selectedWeeklySchedule.timeslots.filter(
+          slot => slot.timeslotId !== timeslot.timeslotId
+        );
+
+        const updatedSchedule = await updateWeeklySchedule(selectedWeeklySchedule._id, {
+          timeslots: updatedTimeslots
+        });
+
+        // Update the selected schedule with the server response
+        setSelectedWeeklySchedule(updatedSchedule);
+
+        notifications.show({
+          title: 'Success',
+          message: 'Timeslot deleted successfully',
+          color: 'green',
+        });
+      }
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete timeslot',
+        color: 'red',
+      });
+    }
+  };
+
+  // Check if user can manage timeslots (gym owners and admins)
+  const canManageTimeslots = user?.userType === 'gym_owner' || user?.userType === 'admin';
 
   // Timeslot handlers
   const handleAddTimeslot = (dayOfWeek: number) => {
@@ -301,7 +451,12 @@ export function SchedulesPage() {
   const firstTemplate = scheduleTemplates?.length > 0 ? scheduleTemplates[0] : null;
   const displayTemplate = selectedTemplate || firstTemplate;
 
-  const currentWeekSchedule = weeklySchedules?.length > 0 ? weeklySchedules[0] : null;
+  // Auto-select first schedule if none selected
+  useEffect(() => {
+    if (weeklySchedules.length > 0 && !selectedWeeklySchedule) {
+      setSelectedWeeklySchedule(weeklySchedules[0]);
+    }
+  }, [weeklySchedules, selectedWeeklySchedule]);
 
   return (
     <AppLayout>
@@ -452,29 +607,78 @@ export function SchedulesPage() {
                 </Group>
               </Card>
 
+              {/* Schedule Selector */}
+              {!schedulesLoading && (
+                <Card>
+                  {weeklySchedules.length > 0 ? (
+                    <Group align="flex-end" gap="md">
+                      <Select
+                        label="Select Active Schedule to View/Edit"
+                        placeholder="Choose a schedule..."
+                        value={selectedWeeklySchedule?._id || ''}
+                        onChange={(value) => {
+                          const schedule = weeklySchedules.find(s => s._id === value);
+                          setSelectedWeeklySchedule(schedule || null);
+                        }}
+                        data={weeklySchedules.map(schedule => ({
+                          value: schedule._id,
+                          label: `${schedule.templateId?.name || 'Unnamed'} - ${schedule.status}`,
+                        }))}
+                        style={{ flex: 1 }}
+                      />
+                      {selectedWeeklySchedule && (
+                        <Menu shadow="md" width={200}>
+                          <Menu.Target>
+                            <ActionIcon size="lg" variant="light">
+                              <IconDots size={16} />
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Item
+                              leftSection={<IconEdit size={14} />}
+                              onClick={() => handleEditSchedule(selectedWeeklySchedule)}
+                            >
+                              Edit Schedule
+                            </Menu.Item>
+                            <Menu.Item
+                              leftSection={<IconTrash size={14} />}
+                              color="red"
+                              onClick={() => handleDeleteSchedule(selectedWeeklySchedule)}
+                            >
+                              Delete Schedule
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      )}
+                    </Group>
+                  ) : (
+                    <Text c="dimmed" ta="center" py="md">
+                      No active schedules found. Create your first schedule to get started.
+                    </Text>
+                  )}
+                </Card>
+              )}
+
               {/* Weekly Schedule Calendar */}
-              {currentWeekSchedule ? (
+              {selectedWeeklySchedule ? (
                 <WeeklyScheduleCalendarView
-                  schedule={currentWeekSchedule}
+                  schedule={selectedWeeklySchedule}
                   onViewTimeslot={handleEnrollClient}
-                  onEditSchedule={() => {
-                    // TODO: Add edit schedule functionality
-                    notifications.show({
-                      title: 'Info',
-                      message: 'Edit schedule functionality will be added soon',
-                      color: 'blue',
-                    });
-                  }}
+                  onEditSchedule={() => handleEditSchedule(selectedWeeklySchedule)}
+                  onAddTimeslot={handleAddWeeklyTimeslot}
+                  onEditTimeslot={handleEditWeeklyTimeslot}
+                  onDeleteTimeslot={handleDeleteWeeklyTimeslot}
+                  canManageTimeslots={canManageTimeslots}
                   loading={schedulesLoading}
                 />
               ) : (
                 <Card>
                   <Stack align="center" gap="md" py="xl">
                     <Text size="lg" c="dimmed">
-                      No schedule for this week
+                      No active schedules available
                     </Text>
                     <Text size="sm" c="dimmed" ta="center">
-                      Copy from a template or create a schedule manually
+                      Create a schedule from a template to get started
                     </Text>
                     <Group gap="sm">
                       <Button
@@ -550,6 +754,33 @@ export function SchedulesPage() {
         timeslot={selectedTimeslot}
         loading={schedulesLoading}
       />
+
+      <EditWeeklyScheduleModal
+        opened={editScheduleModalOpen}
+        onClose={() => {
+          setEditScheduleModalOpen(false);
+          setEditingSchedule(null);
+        }}
+        onSave={handleUpdateSchedule}
+        schedule={editingSchedule}
+        gymId={user?.gymId || ''}
+        loading={schedulesLoading}
+      />
+
+      {user?.gymId && (
+        <WeeklyTimeslotModal
+          opened={weeklyTimeslotModalOpen}
+          onClose={() => {
+            setWeeklyTimeslotModalOpen(false);
+            setEditingWeeklyTimeslot(null);
+          }}
+          onSave={handleSaveWeeklyTimeslot}
+          timeslot={editingWeeklyTimeslot}
+          dayOfWeek={weeklyTimeslotDayOfWeek}
+          loading={schedulesLoading}
+          gymId={user.gymId}
+        />
+      )}
     </AppLayout>
   );
 }

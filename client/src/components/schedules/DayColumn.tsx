@@ -10,6 +10,7 @@ interface DayColumnProps {
   onAddTimeslot?: () => void;
   onTimeslotAction: (action: 'edit' | 'delete' | 'view', timeslot: TemplateTimeslot | WeeklyTimeslot) => void;
   enrollmentData?: Record<string, { enrolled: number; capacity: number }>;
+  canManageTimeslots?: boolean; // Permission to add/edit/delete timeslots
 }
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -21,7 +22,8 @@ export function DayColumn({
   mode,
   onAddTimeslot,
   onTimeslotAction,
-  enrollmentData
+  enrollmentData,
+  canManageTimeslots = false
 }: DayColumnProps) {
   const isTemplate = mode === 'template';
   const dayName = DAY_NAMES[dayOfWeek];
@@ -71,8 +73,8 @@ export function DayColumn({
         </Text>
       </Box>
 
-      {/* Add Timeslot Button (for template mode) */}
-      {isTemplate && onAddTimeslot && (
+      {/* Add Timeslot Button */}
+      {canManageTimeslots && onAddTimeslot && (
         <Button
           variant="light"
           leftSection={<IconPlus size={16} />}
@@ -94,8 +96,8 @@ export function DayColumn({
               timeslot={timeslot}
               mode={mode}
               enrollmentData={getEnrollmentDataForTimeslot(timeslot)}
-              onEdit={isTemplate ? () => handleTimeslotEdit(timeslot) : undefined}
-              onDelete={isTemplate ? () => handleTimeslotDelete(timeslot) : undefined}
+              onEdit={canManageTimeslots ? () => handleTimeslotEdit(timeslot) : undefined}
+              onDelete={canManageTimeslots ? () => handleTimeslotDelete(timeslot) : undefined}
               onViewDetails={!isTemplate ? () => handleTimeslotView(timeslot) : undefined}
             />
           ))
@@ -113,7 +115,7 @@ export function DayColumn({
             <Text size="sm" c="gray.6">
               {isTemplate ? 'No timeslots scheduled' : 'No classes today'}
             </Text>
-            {isTemplate && onAddTimeslot && (
+            {canManageTimeslots && onAddTimeslot && (
               <Button
                 variant="subtle"
                 size="xs"

@@ -64,7 +64,7 @@ export function TimeslotCard({
     >
       <Box>
         {/* Time Range - Prominent Display */}
-        <Text size="lg" fw={700} mb={4}>
+        <Text size="sm" fw={700} mb={4}>
           {formatTime(timeslot.startTime)} - {formatTime(timeslot.endTime)}
         </Text>
 
@@ -115,7 +115,7 @@ export function TimeslotCard({
 
         {/* Action Buttons */}
         <Group justify="flex-end" gap="xs">
-          {isWeeklySchedule ? (
+          {onViewDetails && (
             <Tooltip label="View enrollment details">
               <ActionIcon
                 variant="light"
@@ -126,29 +126,30 @@ export function TimeslotCard({
                 <IconEye size={14} />
               </ActionIcon>
             </Tooltip>
-          ) : (
-            <>
-              <Tooltip label="Edit timeslot">
-                <ActionIcon
-                  variant="light"
-                  color="blue"
-                  size="sm"
-                  onClick={onEdit}
-                >
-                  <IconEdit size={14} />
-                </ActionIcon>
-              </Tooltip>
-              <Tooltip label="Delete timeslot">
-                <ActionIcon
-                  variant="light"
-                  color="red"
-                  size="sm"
-                  onClick={onDelete}
-                >
-                  <IconTrash size={14} />
-                </ActionIcon>
-              </Tooltip>
-            </>
+          )}
+          {onEdit && (
+            <Tooltip label="Edit timeslot">
+              <ActionIcon
+                variant="light"
+                color="blue"
+                size="sm"
+                onClick={onEdit}
+              >
+                <IconEdit size={14} />
+              </ActionIcon>
+            </Tooltip>
+          )}
+          {onDelete && (
+            <Tooltip label="Delete timeslot">
+              <ActionIcon
+                variant="light"
+                color="red"
+                size="sm"
+                onClick={onDelete}
+              >
+                <IconTrash size={14} />
+              </ActionIcon>
+            </Tooltip>
           )}
         </Group>
       </Box>
