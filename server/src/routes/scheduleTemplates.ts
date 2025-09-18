@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { 
+import {
   getScheduleTemplates,
   getScheduleTemplate,
   createScheduleTemplate,
   updateScheduleTemplate,
-  deleteScheduleTemplate,
-  setDefaultTemplate
+  deleteScheduleTemplate
 } from '../controllers/scheduleTemplateController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -29,7 +28,5 @@ router.put('/:id', updateScheduleTemplate);
 // DELETE /api/schedule-templates/:id - Delete template
 router.delete('/:id', deleteScheduleTemplate);
 
-// POST /api/schedule-templates/:id/set-default - Set as default template
-router.post('/:id/set-default', setDefaultTemplate);
 
 export default router;

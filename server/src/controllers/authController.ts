@@ -294,7 +294,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     // Find user with populated gym information if needed
-    const user = await User.findById(req.user.id).populate('gymId', 'name');
+    const user = await User.findById(req.user.id).populate('gymId', 'name').lean();
     if (!user) {
       res.status(404).json({
         success: false,
@@ -303,10 +303,25 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       return;
     }
 
+    // Transform the response to flatten gym structure
+    const userResponse = {
+      ...user,
+      gymId: user.gymId ? (user.gymId as any)._id?.toString() || user.gymId.toString() : undefined,
+      gymName: user.gymId ? (user.gymId as any).name : undefined
+    };
+
+    // Remove sensitive fields
+    delete (userResponse as any).password;
+    delete (userResponse as any).refreshTokens;
+    delete (userResponse as any).passwordResetToken;
+    delete (userResponse as any).passwordResetExpires;
+    delete (userResponse as any).loginAttempts;
+    delete (userResponse as any).lockUntil;
+
     res.json({
       success: true,
       data: {
-        user: user.toJSON()
+        user: userResponse
       }
     });
   } catch (error) {

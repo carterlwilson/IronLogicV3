@@ -6,7 +6,8 @@ import {
   createGym,
   updateGym,
   deleteGym,
-  getGymStats
+  getGymStats,
+  getGymStaff
 } from '../controllers/gymController';
 
 const router = Router();
@@ -31,5 +32,8 @@ router.delete('/:id', requireAdmin, deleteGym);
 
 // GET /api/gyms/:id/stats - Gym statistics
 router.get('/:id/stats', requireRole(['admin', 'gym_owner']), getGymStats);
+
+// GET /api/gyms/:id/staff - Get gym staff (coaches and gym owners)
+router.get('/:id/staff', requireRole(['admin', 'gym_owner']), getGymStaff);
 
 export default router;

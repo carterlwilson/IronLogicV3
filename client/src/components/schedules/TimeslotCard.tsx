@@ -1,57 +1,46 @@
-import { Card, Text, Group, Badge, Stack, ActionIcon, Tooltip, Progress } from '@mantine/core';
-import { IconPlus, IconUsers, IconClock } from '@tabler/icons-react';
-import type { TemplateTimeslot, WeeklyTimeslot, ClientEnrollment } from '../../types/schedules';
+import { Card, Text, Group, ActionIcon, Badge, Box, Tooltip } from '@mantine/core';
+import { IconEdit, IconTrash, IconEye } from '@tabler/icons-react';
+import type { TemplateTimeslot, WeeklyTimeslot } from '../../types/schedules';
 
 interface TimeslotCardProps {
-  timeslot?: TemplateTimeslot | WeeklyTimeslot;
-  dayOfWeek: number;
-  onAdd?: () => void;
-  onEdit?: (timeslot: TemplateTimeslot | WeeklyTimeslot) => void;
-  onEnroll?: (timeslot: WeeklyTimeslot) => void;
-  isTemplate?: boolean;
+  timeslot: TemplateTimeslot | WeeklyTimeslot;
+  mode: 'template' | 'schedule';
+  enrollmentData?: { enrolled: number; capacity: number };
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onViewDetails?: () => void;
 }
 
-export function TimeslotCard({ 
-  timeslot, 
-  dayOfWeek, 
-  onAdd, 
-  onEdit, 
-  onEnroll, 
-  isTemplate = false 
+export function TimeslotCard({
+  timeslot,
+  mode,
+  enrollmentData,
+  onEdit,
+  onDelete,
+  onViewDetails
 }: TimeslotCardProps) {
-  
-  if (!timeslot) {
-    return (
-      <Card 
-        withBorder 
-        p="md" 
-        style={{ 
-          minHeight: 120, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          cursor: 'pointer',
-          borderStyle: 'dashed',
-          borderColor: '#e0e0e0'
-        }}
-        onClick={onAdd}
-      >
-        <Stack align="center" gap="xs">
-          <ActionIcon variant="light" size="lg" radius="xl">
-            <IconPlus size={16} />
-          </ActionIcon>
-          <Text size="sm" c="dimmed">Add Class</Text>
-        </Stack>
-      </Card>
-    );
-  }
+  const isWeeklySchedule = mode === 'schedule';
+  const capacity = enrollmentData?.capacity || timeslot.maxCapacity;
+  const enrolled = enrollmentData?.enrolled || 0;
+  const enrollmentPercentage = capacity > 0 ? (enrolled / capacity) * 100 : 0;
 
-  const enrollments = 'enrollments' in timeslot ? timeslot.enrollments : [];
-  const currentEnrollments = enrollments.length;
-  const maxCapacity = timeslot.maxCapacity;
-  const isWeeklySlot = 'enrollments' in timeslot;
-  
+  // Determine card background color based on enrollment
+  const getCardColor = () => {
+    if (!isWeeklySchedule) return undefined;
+    
+    if (enrollmentPercentage >= 100) return '#ffe3e3'; // Light red - full
+    if (enrollmentPercentage >= 80) return '#e3ffe3'; // Light green - high
+    return undefined; // Default
+  };
+
+  // Determine border color for conflicts or status
+  const getBorderColor = () => {
+    if (enrollmentPercentage >= 100) return '#ff6b6b'; // Red border when full
+    return undefined;
+  };
+
   const formatTime = (time: string) => {
+    // Convert "09:00" to "9:00 AM" format
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
     const ampm = hour >= 12 ? 'PM' : 'AM';
@@ -59,101 +48,110 @@ export function TimeslotCard({
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
-  const getCapacityColor = (current: number, max: number) => {
-    const percentage = (current / max) * 100;
-    if (percentage >= 100) return 'red';
-    if (percentage >= 80) return 'orange';
-    if (percentage >= 60) return 'yellow';
-    return 'green';
-  };
-
   return (
-    <Card 
-      withBorder 
-      p="md" 
-      style={{ minHeight: 120, cursor: 'pointer' }}
-      onClick={() => isWeeklySlot && onEnroll ? onEnroll(timeslot as WeeklyTimeslot) : onEdit?.(timeslot)}
+    <Card
+      shadow="sm"
+      padding="sm"
+      radius="md"
+      withBorder
+      style={{
+        backgroundColor: getCardColor(),
+        borderColor: getBorderColor(),
+        borderWidth: getBorderColor() ? 2 : 1,
+        marginBottom: 8,
+        minHeight: isWeeklySchedule ? 120 : 100
+      }}
     >
-      <Stack gap="xs">
-        <Group justify="space-between" align="flex-start">
-          <div>
-            <Group gap="xs" align="center">
-              <IconClock size={14} color="gray" />
-              <Text fw={600} size="sm">
-                {formatTime(timeslot.startTime)}
-              </Text>
-            </Group>
-            <Text size="lg" fw={500} mt={2}>
-              {timeslot.className || 'Class'}
-            </Text>
-          </div>
-          
-          <Badge 
-            color={getCapacityColor(currentEnrollments, maxCapacity)}
-            variant="light"
-            size="sm"
-          >
-            {currentEnrollments}/{maxCapacity}
-          </Badge>
-        </Group>
+      <Box>
+        {/* Time Range - Prominent Display */}
+        <Text size="lg" fw={700} mb={4}>
+          {formatTime(timeslot.startTime)} - {formatTime(timeslot.endTime)}
+        </Text>
 
-        {/* Template view - show basic info */}
-        {isTemplate && (
-          <Group gap="xs">
-            <IconUsers size={14} color="gray" />
-            <Text size="xs" c="dimmed">
-              Capacity: {maxCapacity}
-            </Text>
-          </Group>
+        {/* Class Name */}
+        {timeslot.className && (
+          <Text size="md" fw={500} mb={2} c="gray.8">
+            {timeslot.className}
+          </Text>
         )}
 
-        {/* Capacity Progress Bar */}
-        {isWeeklySlot && maxCapacity > 0 && (
-          <Stack gap={4}>
-            <Progress 
-              value={(currentEnrollments / maxCapacity) * 100} 
-              color={getCapacityColor(currentEnrollments, maxCapacity)}
+        {/* Location */}
+        <Text size="sm" c="gray.6" mb={2}>
+          📍 {timeslot.location}
+        </Text>
+
+        {/* Capacity/Enrollment Info */}
+        {isWeeklySchedule ? (
+          <Group gap="xs" mb={8}>
+            <Badge
+              color={
+                enrollmentPercentage >= 100 ? 'red' :
+                enrollmentPercentage >= 80 ? 'green' :
+                enrollmentPercentage >= 50 ? 'yellow' : 'gray'
+              }
+              variant="light"
               size="sm"
-              radius="xs"
-            />
-            <Text size="xs" c="dimmed" ta="center">
-              {currentEnrollments > 0 ? `${currentEnrollments} enrolled` : 'Available'}
-            </Text>
-          </Stack>
-        )}
-
-        {/* Weekly schedule view - show enrollments */}
-        {isWeeklySlot && enrollments.length > 0 && (
-          <Stack gap={2}>
-            {enrollments.slice(0, 2).map((enrollment: ClientEnrollment, index) => (
-              <Group key={index} gap={4}>
-                <div style={{ 
-                  width: 6, 
-                  height: 6, 
-                  borderRadius: '50%', 
-                  backgroundColor: '#339af0' 
-                }} />
-                <Text size="xs" truncate style={{ maxWidth: 120 }}>
-                  Client {enrollment.clientId.slice(-4)}
-                </Text>
-              </Group>
-            ))}
-            {enrollments.length > 2 && (
-              <Text size="xs" c="dimmed">
-                +{enrollments.length - 2} more
-              </Text>
+            >
+              {enrolled}/{capacity} enrolled
+            </Badge>
+            {enrollmentPercentage >= 100 && (
+              <Badge color="red" variant="filled" size="xs">
+                FULL
+              </Badge>
             )}
-          </Stack>
+          </Group>
+        ) : (
+          <Text size="sm" c="gray.6" mb={8}>
+            Max capacity: {timeslot.maxCapacity}
+          </Text>
         )}
 
+        {/* Notes (if any) */}
         {timeslot.notes && (
-          <Tooltip label={timeslot.notes}>
-            <Text size="xs" c="dimmed" truncate>
-              {timeslot.notes}
-            </Text>
-          </Tooltip>
+          <Text size="xs" c="gray.5" mb={8} style={{ fontStyle: 'italic' }}>
+            Note: {timeslot.notes}
+          </Text>
         )}
-      </Stack>
+
+        {/* Action Buttons */}
+        <Group justify="flex-end" gap="xs">
+          {isWeeklySchedule ? (
+            <Tooltip label="View enrollment details">
+              <ActionIcon
+                variant="light"
+                color="blue"
+                size="sm"
+                onClick={onViewDetails}
+              >
+                <IconEye size={14} />
+              </ActionIcon>
+            </Tooltip>
+          ) : (
+            <>
+              <Tooltip label="Edit timeslot">
+                <ActionIcon
+                  variant="light"
+                  color="blue"
+                  size="sm"
+                  onClick={onEdit}
+                >
+                  <IconEdit size={14} />
+                </ActionIcon>
+              </Tooltip>
+              <Tooltip label="Delete timeslot">
+                <ActionIcon
+                  variant="light"
+                  color="red"
+                  size="sm"
+                  onClick={onDelete}
+                >
+                  <IconTrash size={14} />
+                </ActionIcon>
+              </Tooltip>
+            </>
+          )}
+        </Group>
+      </Box>
     </Card>
   );
 }

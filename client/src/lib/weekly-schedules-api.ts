@@ -14,7 +14,7 @@ export interface WeeklySchedulesQueryParams {
 
 export interface CreateWeeklyScheduleData {
   templateId: string;
-  weekStartDate: string; // Must be a Monday
+  assignedCoachId?: string; // Optional coach override - if not provided, uses template's assignedCoachId
   notes?: string;
 }
 
@@ -26,9 +26,8 @@ export interface UpdateWeeklyScheduleData {
     dayOfWeek: number;
     startTime: string;
     endTime: string;
-    locationId: string;
-    coachId: string;
-    programId?: string;
+    location: string;
+    coachId?: string;
     maxCapacity: number;
     className?: string;
     notes?: string;

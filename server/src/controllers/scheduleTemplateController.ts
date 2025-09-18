@@ -3,7 +3,6 @@ import { Types } from 'mongoose';
 import ScheduleTemplate, { IScheduleTemplate } from '../models/ScheduleTemplate';
 import { Gym } from '../models/Gym';
 import { User } from '../models/User';
-import WorkoutProgram from '../models/WorkoutProgram';
 import { AuthRequest } from '../middleware/auth';
 
 // Helper function to validate user access to gym
@@ -30,15 +29,6 @@ const validateCoachAccess = async (coachId: Types.ObjectId, gymId: Types.ObjectI
   return !!coach;
 };
 
-// Helper function to validate program belongs to gym
-const validateProgramAccess = async (programId: Types.ObjectId, gymId: Types.ObjectId) => {
-  const program = await WorkoutProgram.findOne({
-    _id: programId,
-    gymId: gymId,
-    isActive: true
-  });
-  return !!program;
-};
 
 // GET /api/schedule-templates - List templates for gym with filtering and pagination
 export const getScheduleTemplates = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -130,7 +120,7 @@ export const getScheduleTemplates = async (req: AuthRequest, res: Response): Pro
             preserveNullAndEmptyArrays: true
           }
         },
-        { $sort: { isDefault: -1, updatedAt: -1 } },
+        { $sort: { updatedAt: -1 } },
         { $skip: skip },
         { $limit: limitNum }
       ];
@@ -140,7 +130,7 @@ export const getScheduleTemplates = async (req: AuthRequest, res: Response): Pro
       // Simple query without stats
       templates = await ScheduleTemplate.find(filter)
         .populate('createdBy', 'name email')
-        .sort({ isDefault: -1, updatedAt: -1 })
+        .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(limitNum)
         .lean();
@@ -195,7 +185,6 @@ export const getScheduleTemplate = async (req: AuthRequest, res: Response): Prom
     })
     .populate('createdBy', 'name email')
     .populate('timeslots.coachId', 'name email')
-    .populate('timeslots.programId', 'name description')
     .lean();
     
     if (!template) {
@@ -237,7 +226,6 @@ export const createScheduleTemplate = async (req: AuthRequest, res: Response): P
       name,
       description,
       gymId: requestGymId,
-      isDefault,
       timeslots
     } = req.body;
     
@@ -325,23 +313,20 @@ export const createScheduleTemplate = async (req: AuthRequest, res: Response): P
           }
         }
         
-        // Validate program belongs to gym (if specified)
-        if (slot.programId) {
-          const programValid = await validateProgramAccess(new Types.ObjectId(slot.programId), gymId);
-          if (!programValid) {
-            res.status(400).json({
-              success: false,
-              message: `Workout program ${slot.programId} does not belong to this gym or is not active`
-            });
-            return;
-          }
-        }
         
-        // Validate location exists in gym (simplified - assuming locationId is valid)
-        if (!Types.ObjectId.isValid(slot.locationId)) {
+        // Validate location is provided and not empty
+        if (!slot.location || slot.location.trim().length === 0) {
           res.status(400).json({
             success: false,
-            message: 'Invalid location ID in timeslot'
+            message: 'Location is required for timeslot'
+          });
+          return;
+        }
+        
+        if (slot.location.trim().length > 100) {
+          res.status(400).json({
+            success: false,
+            message: 'Location name cannot exceed 100 characters'
           });
           return;
         }
@@ -364,7 +349,6 @@ export const createScheduleTemplate = async (req: AuthRequest, res: Response): P
       name: name.trim(),
       gymId,
       description: description?.trim(),
-      isDefault: !!isDefault,
       timeslots: timeslots || [],
       createdBy: new Types.ObjectId(req.user!.id)
     };
@@ -376,7 +360,6 @@ export const createScheduleTemplate = async (req: AuthRequest, res: Response): P
     await template.populate([
       { path: 'createdBy', select: 'name email' },
       { path: 'timeslots.coachId', select: 'name email' },
-      { path: 'timeslots.programId', select: 'name description' }
     ]);
     
     res.status(201).json({
@@ -401,7 +384,6 @@ export const updateScheduleTemplate = async (req: AuthRequest, res: Response): P
     const {
       name,
       description,
-      isDefault,
       timeslots
     } = req.body;
     
@@ -481,23 +463,20 @@ export const updateScheduleTemplate = async (req: AuthRequest, res: Response): P
           }
         }
         
-        // Validate program belongs to gym (if specified)
-        if (slot.programId) {
-          const programValid = await validateProgramAccess(new Types.ObjectId(slot.programId), template.gymId);
-          if (!programValid) {
-            res.status(400).json({
-              success: false,
-              message: `Workout program ${slot.programId} does not belong to this gym or is not active`
-            });
-            return;
-          }
-        }
         
-        // Validate location exists in gym
-        if (!Types.ObjectId.isValid(slot.locationId)) {
+        // Validate location is provided and not empty
+        if (!slot.location || slot.location.trim().length === 0) {
           res.status(400).json({
             success: false,
-            message: 'Invalid location ID in timeslot'
+            message: 'Location is required for timeslot'
+          });
+          return;
+        }
+        
+        if (slot.location.trim().length > 100) {
+          res.status(400).json({
+            success: false,
+            message: 'Location name cannot exceed 100 characters'
           });
           return;
         }
@@ -519,7 +498,6 @@ export const updateScheduleTemplate = async (req: AuthRequest, res: Response): P
     const updateData: any = {};
     if (name !== undefined) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description?.trim();
-    if (isDefault !== undefined) updateData.isDefault = !!isDefault;
     if (timeslots !== undefined) updateData.timeslots = timeslots;
     
     const updatedTemplate = await ScheduleTemplate.findByIdAndUpdate(
@@ -529,7 +507,6 @@ export const updateScheduleTemplate = async (req: AuthRequest, res: Response): P
     ).populate([
       { path: 'createdBy', select: 'name email' },
       { path: 'timeslots.coachId', select: 'name email' },
-      { path: 'timeslots.programId', select: 'name description' }
     ]);
     
     res.status(200).json({
@@ -598,7 +575,6 @@ export const deleteScheduleTemplate = async (req: AuthRequest, res: Response): P
     
     // Soft delete
     template.isActive = false;
-    template.isDefault = false; // Remove default flag when deleting
     await template.save();
     
     res.status(200).json({
@@ -615,67 +591,3 @@ export const deleteScheduleTemplate = async (req: AuthRequest, res: Response): P
   }
 };
 
-// POST /api/schedule-templates/:id/set-default - Set as default template
-export const setDefaultTemplate = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    
-    if (!id || !Types.ObjectId.isValid(id)) {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid schedule template ID'
-      });
-      return;
-    }
-    
-    const template = await ScheduleTemplate.findOne({
-      _id: new Types.ObjectId(id),
-      isActive: true
-    });
-    
-    if (!template) {
-      res.status(404).json({
-        success: false,
-        message: 'Schedule template not found'
-      });
-      return;
-    }
-    
-    // Check gym access
-    const hasAccess = await validateGymAccess(req, template.gymId);
-    if (!hasAccess) {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied to modify this schedule template'
-      });
-      return;
-    }
-    
-    // Check permissions
-    if (req.user?.userType !== 'admin' && 
-        req.user?.userType !== 'gym_owner') {
-      res.status(403).json({
-        success: false,
-        message: 'Insufficient permissions to set default template'
-      });
-      return;
-    }
-    
-    // Set as default (pre-save middleware will handle removing default from others)
-    template.isDefault = true;
-    await template.save();
-    
-    res.status(200).json({
-      success: true,
-      data: { template },
-      message: 'Schedule template set as default successfully'
-    });
-  } catch (error: any) {
-    console.error('Error setting default template:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to set default template',
-      error: error.message
-    });
-  }
-};

@@ -90,7 +90,7 @@ export function EditUserModal({
         name: user.name,
         email: user.email,
         userType: user.userType,
-        gymId: user.gymId?._id || '',
+        gymId: user.gymId || '',
         isActive: user.isActive,
         membershipType: 'standard', // This would come from clientProfile in a full implementation
         fitnessGoals: '',

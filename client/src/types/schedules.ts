@@ -6,7 +6,7 @@ export interface ScheduleTemplate {
     gymId: string;
     name: string;
     description?: string;
-    isDefault: boolean;
+    assignedCoachId?: string;
     timeslots: TemplateTimeslot[];
     isActive: boolean;
     createdAt: Date;
@@ -22,9 +22,8 @@ export interface TemplateTimeslot {
     dayOfWeek: number; // 1-7 (Monday-Sunday)
     startTime: string; // "09:00" format
     endTime: string;   // "10:00" format
-    locationId: string;
-    coachId: string;
-    programId?: string;
+    location: string;
+    coachId?: string;
     maxCapacity: number;
     className?: string;
     notes?: string;
@@ -37,9 +36,8 @@ export interface WeeklyTimeslot {
     dayOfWeek: number; // 1-7 (Monday-Sunday)
     startTime: string; // "09:00" format
     endTime: string;   // "10:00" format
-    locationId: string;
-    coachId: string;
-    programId?: string;
+    location: string;
+    coachId?: string;
     maxCapacity: number;
     className?: string;
     notes?: string;
@@ -54,9 +52,8 @@ export interface WeeklySchedule {
     _id: string;
     gymId: string;
     templateId: string;
-    weekStartDate: string;
-    weekEndDate: string;
     status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled';
+    assignedCoachId?: string;
     timeslots: WeeklyTimeslot[];
     totalEnrollments?: number;
     totalAvailableSpots?: number;

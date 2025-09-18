@@ -16,17 +16,10 @@ import {
   IconClock,
   IconMapPin,
   IconUser,
-  IconBarbell,
   IconAlertCircle
 } from '@tabler/icons-react';
 import { useForm } from '@mantine/form';
-import { usersApi } from '../../lib/users-api';
-import { gymsApi } from '../../lib/gyms-api';
-import { getWorkoutPrograms } from '../../lib/workout-programs-api';
 import type { TemplateTimeslot } from '../../types/schedules';
-import type { User } from '../../types/auth';
-import type { Gym, Location } from '../../lib/gyms-api';
-import type { WorkoutProgram } from '../../types/index';
 
 interface TimeslotModalProps {
   opened: boolean;
@@ -61,20 +54,15 @@ export function TimeslotModal({
   loading = false,
   gymId
 }: TimeslotModalProps) {
-  const [coaches, setCoaches] = useState<User[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [programs, setPrograms] = useState<WorkoutProgram[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   
   const form = useForm({
     initialValues: {
-      dayOfWeek: dayOfWeek,
+      dayOfWeek: dayOfWeek.toString(),
       startTime: '09:00',
       endTime: '10:00',
-      locationId: '',
-      coachId: '',
-      programId: '',
+      location: '',
       maxCapacity: 20,
       className: '',
       notes: '',
@@ -87,8 +75,7 @@ export function TimeslotModal({
         if (value <= values.startTime) return 'End time must be after start time';
         return null;
       },
-      locationId: (value) => !value ? 'Location is required' : null,
-      coachId: (value) => !value ? 'Coach is required' : null,
+      location: (value) => !value ? 'Location is required' : null,
       maxCapacity: (value) => {
         if (!value || value < 1) return 'Capacity must be at least 1';
         if (value > 100) return 'Capacity cannot exceed 100';
@@ -109,12 +96,10 @@ export function TimeslotModal({
     if (opened) {
       if (timeslot) {
         form.setValues({
-          dayOfWeek: timeslot.dayOfWeek,
+          dayOfWeek: timeslot.dayOfWeek.toString(),
           startTime: timeslot.startTime,
           endTime: timeslot.endTime,
-          locationId: timeslot.locationId,
-          coachId: timeslot.coachId,
-          programId: timeslot.programId || '',
+          location: timeslot.location,
           maxCapacity: timeslot.maxCapacity,
           className: timeslot.className || '',
           notes: timeslot.notes || '',
@@ -122,12 +107,10 @@ export function TimeslotModal({
         });
       } else {
         form.setValues({
-          dayOfWeek: dayOfWeek,
+          dayOfWeek: dayOfWeek.toString(),
           startTime: '09:00',
           endTime: '10:00',
-          locationId: '',
-          coachId: '',
-          programId: '',
+          location: '',
           maxCapacity: 20,
           className: '',
           notes: '',
@@ -142,33 +125,7 @@ export function TimeslotModal({
     try {
       setLoadingData(true);
       
-      const [coachesResponse, gymResponse, programsResponse] = await Promise.all([
-        // Get coaches and gym owners for this gym
-        usersApi.getUsers({ 
-          gymId, 
-          userType: 'coach,gym_owner', 
-          limit: 100 
-        }),
-        // Get gym details with locations
-        gymsApi.getGym(gymId),
-        // Get workout programs for this gym
-        getWorkoutPrograms({ 
-          gymId, 
-          limit: 100 
-        })
-      ]);
-
-      if (coachesResponse.success) {
-        setCoaches(coachesResponse.data.users.filter(user => 
-          ['coach', 'gym_owner'].includes(user.userType) && user.isActive
-        ));
-      }
-
-      if (gymResponse.success) {
-        setLocations(gymResponse.data.gym.locations || []);
-      }
-
-      setPrograms(programsResponse.programs || []);
+      // No additional data loading needed
     } catch (error) {
       console.error('Error loading modal data:', error);
     } finally {
@@ -199,12 +156,10 @@ export function TimeslotModal({
     }
 
     const timeslotData = {
-      dayOfWeek: form.values.dayOfWeek,
+      dayOfWeek: parseInt(form.values.dayOfWeek),
       startTime: form.values.startTime,
       endTime: form.values.endTime,
-      locationId: form.values.locationId,
-      coachId: form.values.coachId,
-      programId: form.values.programId || undefined,
+      location: form.values.location,
       maxCapacity: form.values.maxCapacity,
       className: form.values.className || undefined,
       notes: form.values.notes || undefined,
@@ -214,23 +169,7 @@ export function TimeslotModal({
     onSave(timeslotData);
   };
 
-  const coachOptions = coaches.map(coach => ({
-    value: coach._id,
-    label: `${coach.name} (${coach.userType})`,
-  }));
 
-  const locationOptions = locations.map(location => ({
-    value: location.locationId,
-    label: location.name,
-  }));
-
-  const programOptions = [
-    { value: '', label: 'No Program (Open Class)' },
-    ...programs.map(program => ({
-      value: program._id,
-      label: program.name,
-    }))
-  ];
 
   return (
     <Modal
@@ -258,10 +197,8 @@ export function TimeslotModal({
               label="Day of Week"
               leftSection={<IconClock size={16} />}
               required
-              {...form.getInputProps('dayOfWeek')}
               data={DAYS_OF_WEEK}
-              value={form.values.dayOfWeek.toString()}
-              onChange={(value) => form.setFieldValue('dayOfWeek', parseInt(value || '1'))}
+              {...form.getInputProps('dayOfWeek')}
             />
             
             <NumberInput
@@ -290,34 +227,14 @@ export function TimeslotModal({
             />
           </Group>
 
-          <Select
+          <TextInput
             label="Location"
-            placeholder="Select a location"
+            placeholder="Enter location name"
             leftSection={<IconMapPin size={16} />}
             required
-            data={locationOptions}
-            {...form.getInputProps('locationId')}
-            disabled={loadingData}
+            {...form.getInputProps('location')}
           />
 
-          <Select
-            label="Coach"
-            placeholder="Select a coach"
-            leftSection={<IconUser size={16} />}
-            required
-            data={coachOptions}
-            {...form.getInputProps('coachId')}
-            disabled={loadingData}
-          />
-
-          <Select
-            label="Workout Program"
-            placeholder="Select a program (optional)"
-            leftSection={<IconBarbell size={16} />}
-            data={programOptions}
-            {...form.getInputProps('programId')}
-            disabled={loadingData}
-          />
 
           <TextInput
             label="Class Name"

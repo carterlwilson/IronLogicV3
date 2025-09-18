@@ -16,7 +16,6 @@ interface UseScheduleTemplatesReturn {
   createScheduleTemplate: (templateData: CreateScheduleTemplateData) => Promise<ScheduleTemplate>;
   updateScheduleTemplate: (id: string, templateData: UpdateScheduleTemplateData) => Promise<ScheduleTemplate>;
   deleteScheduleTemplate: (id: string) => Promise<void>;
-  setAsDefault: (id: string) => Promise<ScheduleTemplate>;
 }
 
 export function useScheduleTemplates(): UseScheduleTemplatesReturn {
@@ -63,7 +62,7 @@ export function useScheduleTemplates(): UseScheduleTemplatesReturn {
       if (response.success) {
         // Refresh the list to include the new template
         await fetchScheduleTemplates();
-        return response.data;
+        return response.data.template;
       } else {
         throw new Error(response.message || 'Failed to create schedule template');
       }
@@ -86,12 +85,12 @@ export function useScheduleTemplates(): UseScheduleTemplatesReturn {
       
       if (response.success) {
         // Update the template in the local state
-        setScheduleTemplates(prev => 
-          prev.map(template => 
-            template._id === id ? response.data : template
+        setScheduleTemplates(prev =>
+          prev.map(template =>
+            template._id === id ? response.data.template : template
           )
         );
-        return response.data;
+        return response.data.template;
       } else {
         throw new Error(response.message || 'Failed to update schedule template');
       }
@@ -128,34 +127,6 @@ export function useScheduleTemplates(): UseScheduleTemplatesReturn {
     }
   }, []);
 
-  const setAsDefault = useCallback(async (id: string): Promise<ScheduleTemplate> => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await scheduleTemplatesApi.setAsDefault(id);
-      
-      if (response.success) {
-        // Update all templates: set the selected one as default, others as non-default
-        setScheduleTemplates(prev => 
-          prev.map(template => ({
-            ...template,
-            isDefault: template._id === id
-          }))
-        );
-        return response.data;
-      } else {
-        throw new Error(response.message || 'Failed to set template as default');
-      }
-    } catch (err) {
-      console.error('Error setting template as default:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
-      setError(errorMessage);
-      throw new Error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   return {
     scheduleTemplates,
@@ -165,7 +136,6 @@ export function useScheduleTemplates(): UseScheduleTemplatesReturn {
     fetchScheduleTemplates,
     createScheduleTemplate,
     updateScheduleTemplate,
-    deleteScheduleTemplate,
-    setAsDefault
+    deleteScheduleTemplate
   };
 }

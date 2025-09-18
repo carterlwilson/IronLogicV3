@@ -617,3 +617,84 @@ export const getGymStats = async (req: AuthRequest, res: Response): Promise<void
     });
   }
 };
+
+// GET /api/gyms/:id/staff - Get gym staff (coaches and gym owners)
+export const getGymStaff = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID parameter exists
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Gym ID is required'
+      });
+      return;
+    }
+
+    // Validate ObjectId
+    if (!Types.ObjectId.isValid(id as string)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid gym ID format'
+      });
+      return;
+    }
+
+    // Check access permissions
+    let hasAccess = false;
+
+    if (req.user?.userType === 'admin') {
+      hasAccess = true;
+      // Admin can access any gym
+    } else if (req.user?.userType === 'gym_owner') {
+      // Gym owner can only access their own gym
+      if (req.user.gymId && req.user.gymId === id) {
+        hasAccess = true;
+      }
+    }
+
+    if (!hasAccess) {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied to gym staff information'
+      });
+      return;
+    }
+
+    // Verify gym exists
+    const gym = await Gym.findOne({ _id: id, isActive: true });
+    if (!gym) {
+      res.status(404).json({
+        success: false,
+        message: 'Gym not found'
+      });
+      return;
+    }
+
+    // Get all staff members (coaches and gym owners) for this gym
+    const staff = await User.find({
+      gymId: id,
+      userType: { $in: ['coach', 'gym_owner'] },
+      isActive: true
+    })
+    .select('_id name email userType phone createdAt')
+    .sort({ userType: 1, name: 1 })
+    .lean();
+
+    res.json({
+      success: true,
+      data: {
+        staff,
+        total: staff.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching gym staff:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching gym staff'
+    });
+  }
+};

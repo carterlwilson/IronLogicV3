@@ -8,50 +8,23 @@ import { AuthRequest } from '../middleware/auth';
 // Create weekly schedule from template
 export const createWeeklySchedule = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { templateId, weekStartDate, notes } = req.body;
+    const { templateId, notes } = req.body;
     const userId = req.user?.id;
     const userGymId = req.user?.gymId;
 
     if (!userId || !userGymId) {
-      res.status(401).json({ 
-        success: false, 
-        message: 'User authentication required' 
+      res.status(401).json({
+        success: false,
+        message: 'User authentication required'
       });
       return;
     }
 
     // Validate templateId
     if (!templateId || !Types.ObjectId.isValid(templateId)) {
-      res.status(400).json({ 
-        success: false, 
-        message: 'Valid template ID is required' 
-      });
-      return;
-    }
-
-    // Validate weekStartDate
-    if (!weekStartDate) {
-      res.status(400).json({ 
-        success: false, 
-        message: 'Week start date is required' 
-      });
-      return;
-    }
-
-    const startDate = new Date(weekStartDate);
-    if (isNaN(startDate.getTime())) {
-      res.status(400).json({ 
-        success: false, 
-        message: 'Invalid week start date format' 
-      });
-      return;
-    }
-
-    // Ensure it's a Monday
-    if (startDate.getDay() !== 1) {
-      res.status(400).json({ 
-        success: false, 
-        message: 'Week start date must be a Monday' 
+      res.status(400).json({
+        success: false,
+        message: 'Valid template ID is required'
       });
       return;
     }
@@ -71,25 +44,9 @@ export const createWeeklySchedule = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    // Check if schedule already exists for this week
-    const { weekStart } = (WeeklySchedule as any).getWeekBounds(startDate);
-    const existingSchedule = await WeeklySchedule.findOne({
-      gymId: userGymId,
-      weekStartDate: weekStart
-    });
-
-    if (existingSchedule) {
-      res.status(409).json({ 
-        success: false, 
-        message: 'Weekly schedule already exists for this week' 
-      });
-      return;
-    }
-
     // Create new weekly schedule from template
     const weeklySchedule = await (WeeklySchedule as any).createFromTemplate(
       new Types.ObjectId(templateId),
-      startDate,
       new Types.ObjectId(userId)
     );
 
@@ -104,7 +61,6 @@ export const createWeeklySchedule = async (req: AuthRequest, res: Response): Pro
       .populate('templateId', 'name description')
       .populate('createdBy', 'name email')
       .populate('timeslots.coachId', 'name email')
-      .populate('timeslots.programId', 'name description')
       .populate('timeslots.enrollments.clientId', 'personalInfo.firstName personalInfo.lastName');
 
     res.status(201).json({
@@ -136,14 +92,12 @@ export const getWeeklySchedules = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const { 
-      page = 1, 
-      limit = 20, 
-      status, 
-      weekStart, 
-      weekEnd, 
+    const {
+      page = 1,
+      limit = 20,
+      status,
       templateId,
-      coachId 
+      coachId
     } = req.query;
 
     // Build filter
@@ -164,16 +118,6 @@ export const getWeeklySchedules = async (req: AuthRequest, res: Response): Promi
       filter['timeslots.coachId'] = coachId;
     }
 
-    // Date range filtering
-    if (weekStart || weekEnd) {
-      filter.weekStartDate = {};
-      if (weekStart) {
-        filter.weekStartDate.$gte = new Date(weekStart as string);
-      }
-      if (weekEnd) {
-        filter.weekStartDate.$lte = new Date(weekEnd as string);
-      }
-    }
 
     const pageNum = Math.max(1, parseInt(page as string));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string)));
@@ -186,9 +130,8 @@ export const getWeeklySchedules = async (req: AuthRequest, res: Response): Promi
         .populate('createdBy', 'name email')
         .populate('publishedBy', 'name email')
         .populate('timeslots.coachId', 'name email')
-        .populate('timeslots.programId', 'name description')
-        .populate('timeslots.enrollments.clientId', 'personalInfo.firstName personalInfo.lastName')
-        .sort({ weekStartDate: -1, createdAt: -1 })
+          .populate('timeslots.enrollments.clientId', 'personalInfo.firstName personalInfo.lastName')
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limitNum),
       WeeklySchedule.countDocuments(filter)
@@ -246,7 +189,6 @@ export const getWeeklyScheduleById = async (req: AuthRequest, res: Response): Pr
       .populate('createdBy', 'name email')
       .populate('publishedBy', 'name email')
       .populate('timeslots.coachId', 'name email')
-      .populate('timeslots.programId', 'name description')
       .populate('timeslots.enrollments.clientId', 'personalInfo.firstName personalInfo.lastName membershipInfo');
 
     if (!schedule) {
@@ -384,7 +326,6 @@ export const updateWeeklySchedule = async (req: AuthRequest, res: Response): Pro
       .populate('createdBy', 'name email')
       .populate('publishedBy', 'name email')
       .populate('timeslots.coachId', 'name email')
-      .populate('timeslots.programId', 'name description')
       .populate('timeslots.enrollments.clientId', 'personalInfo.firstName personalInfo.lastName');
 
     res.status(200).json({
@@ -657,8 +598,6 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const currentWeek = (WeeklySchedule as any).getWeekBounds(new Date());
-    
     const stats = await WeeklySchedule.aggregate([
       {
         $match: {
@@ -668,14 +607,11 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
       },
       {
         $facet: {
-          // Current week stats
-          currentWeek: [
+          // Current active schedules stats
+          activeSchedules: [
             {
               $match: {
-                weekStartDate: {
-                  $gte: currentWeek.weekStart,
-                  $lte: currentWeek.weekEnd
-                }
+                status: { $in: ['published', 'active'] }
               }
             },
             {
@@ -685,8 +621,8 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
               $group: {
                 _id: null,
                 totalTimeslots: { $sum: 1 },
-                totalEnrollments: { 
-                  $sum: { 
+                totalEnrollments: {
+                  $sum: {
                     $size: {
                       $filter: {
                         input: '$timeslots.enrollments',
@@ -708,11 +644,11 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
               }
             }
           ],
-          // Weekly utilization
-          weeklyUtilization: [
+          // Recent utilization by schedule
+          recentUtilization: [
             {
               $match: {
-                weekStartDate: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
+                createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } // Last 30 days
               }
             },
             {
@@ -720,9 +656,11 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
             },
             {
               $group: {
-                _id: '$weekStartDate',
-                enrollments: { 
-                  $sum: { 
+                _id: '$_id',
+                scheduleId: { $first: '$_id' },
+                createdAt: { $first: '$createdAt' },
+                enrollments: {
+                  $sum: {
                     $size: {
                       $filter: {
                         input: '$timeslots.enrollments',
@@ -736,7 +674,8 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
             },
             {
               $project: {
-                week: '$_id',
+                scheduleId: 1,
+                createdAt: 1,
                 enrollments: 1,
                 capacity: 1,
                 utilization: {
@@ -747,7 +686,7 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
                 }
               }
             },
-            { $sort: { week: 1 } }
+            { $sort: { createdAt: 1 } }
           ]
         }
       }
@@ -758,13 +697,13 @@ export const getScheduleStats = async (req: AuthRequest, res: Response): Promise
     res.status(200).json({
       success: true,
       data: {
-        currentWeek: result.currentWeek[0] || {
+        activeSchedules: result.activeSchedules[0] || {
           totalTimeslots: 0,
           totalEnrollments: 0,
           totalCapacity: 0
         },
         schedulesByStatus: result.overall,
-        weeklyUtilization: result.weeklyUtilization
+        recentUtilization: result.recentUtilization
       }
     });
 

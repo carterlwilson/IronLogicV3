@@ -173,6 +173,24 @@ export interface GymsQueryParams {
 }
 
 // API functions - matching exact server routes
+// Staff member interface
+export interface StaffMember {
+  _id: string;
+  name: string;
+  email: string;
+  userType: 'coach' | 'gym_owner';
+  phone?: string;
+  createdAt: string;
+}
+
+export interface GymStaffResponse {
+  success: boolean;
+  data: {
+    staff: StaffMember[];
+    total: number;
+  };
+}
+
 export const gymsApi = {
   // GET /api/gyms - List gyms (admin: all, owner: their gym)
   getGyms: async (params: GymsQueryParams = {}): Promise<GymsListResponse> => {
@@ -214,6 +232,12 @@ export const gymsApi = {
   // GET /api/gyms/:id/stats - Gym statistics
   getGymStats: async (id: string): Promise<GymStatsResponse> => {
     const response = await api.get(`/api/gyms/${id}/stats`);
+    return response.data;
+  },
+
+  // GET /api/gyms/:id/staff - Get gym staff (coaches and gym owners)
+  getGymStaff: async (id: string): Promise<GymStaffResponse> => {
+    const response = await api.get(`/api/gyms/${id}/staff`);
     return response.data;
   }
 };

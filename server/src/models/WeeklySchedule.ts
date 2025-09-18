@@ -15,9 +15,8 @@ interface WeeklyTimeslot {
   dayOfWeek: number; // 1-7 (Monday-Sunday)
   startTime: string; // "09:00" format
   endTime: string;   // "10:00" format
-  locationId: Types.ObjectId; // reference to gym location
-  coachId: Types.ObjectId; // reference to User (coach)
-  programId?: Types.ObjectId; // optional reference to WorkoutProgram
+  location: string; // location name/description
+  coachId?: Types.ObjectId; // reference to User (coach)
   maxCapacity: number;
   className?: string;
   notes?: string;
@@ -32,9 +31,8 @@ export interface IWeeklySchedule extends Document {
   _id: Types.ObjectId;
   gymId: Types.ObjectId; // reference to Gym
   templateId: Types.ObjectId; // reference to ScheduleTemplate
-  weekStartDate: Date; // Monday of the week (ISO week)
-  weekEndDate: Date; // Sunday of the week
   status: 'draft' | 'published' | 'active' | 'completed' | 'cancelled';
+  assignedCoachId?: Types.ObjectId; // reference to User (coach) assigned to this schedule
   timeslots: WeeklyTimeslot[];
   totalEnrollments: number; // virtual field
   notes?: string;
@@ -109,18 +107,16 @@ const weeklyTimeslotSchema = new Schema<WeeklyTimeslot>({
       message: 'End time must be in HH:MM format (24-hour)'
     }
   },
-  locationId: {
-    type: Schema.Types.ObjectId,
-    required: true
+  location: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 100,
+    minlength: 1
   },
   coachId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
-  },
-  programId: {
-    type: Schema.Types.ObjectId,
-    ref: 'WorkoutProgram',
     default: null
   },
   maxCapacity: {
@@ -182,32 +178,15 @@ const weeklyScheduleSchema = new Schema<IWeeklySchedule>({
     ref: 'ScheduleTemplate',
     required: true
   },
-  weekStartDate: {
-    type: Date,
-    required: true,
-    validate: {
-      validator: function(date: Date) {
-        // Ensure it's a Monday (day 1 in ISO week)
-        return date.getDay() === 1;
-      },
-      message: 'Week start date must be a Monday'
-    }
-  },
-  weekEndDate: {
-    type: Date,
-    required: true,
-    validate: {
-      validator: function(date: Date) {
-        // Ensure it's a Sunday (day 0 in JavaScript Date)
-        return date.getDay() === 0;
-      },
-      message: 'Week end date must be a Sunday'
-    }
-  },
   status: {
     type: String,
     enum: ['draft', 'published', 'active', 'completed', 'cancelled'],
     default: 'draft'
+  },
+  assignedCoachId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    default: null // Optional - coach can be assigned to entire schedule
   },
   timeslots: [weeklyTimeslotSchema],
   notes: {
@@ -238,17 +217,11 @@ const weeklyScheduleSchema = new Schema<IWeeklySchedule>({
 });
 
 // Indexes for performance
-weeklyScheduleSchema.index({ gymId: 1, weekStartDate: 1 });
 weeklyScheduleSchema.index({ gymId: 1, status: 1 });
-weeklyScheduleSchema.index({ templateId: 1, weekStartDate: 1 });
-weeklyScheduleSchema.index({ 'timeslots.coachId': 1, weekStartDate: 1 });
+weeklyScheduleSchema.index({ templateId: 1 });
+weeklyScheduleSchema.index({ assignedCoachId: 1 });
+weeklyScheduleSchema.index({ 'timeslots.coachId': 1 });
 weeklyScheduleSchema.index({ 'timeslots.enrollments.clientId': 1 });
-
-// Compound index for preventing duplicate schedules
-weeklyScheduleSchema.index({ 
-  gymId: 1, 
-  weekStartDate: 1 
-}, { unique: true });
 
 // Text search index
 weeklyScheduleSchema.index({ 
@@ -277,80 +250,47 @@ weeklyScheduleSchema.virtual('totalAvailableSpots').get(function(this: IWeeklySc
   }, 0);
 });
 
-// Pre-save middleware to set week end date automatically
-weeklyScheduleSchema.pre('save', function(this: IWeeklySchedule) {
-  if (this.isModified('weekStartDate')) {
-    // Calculate Sunday of the same week
-    const weekStart = new Date(this.weekStartDate);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6); // Add 6 days to get Sunday
-    this.weekEndDate = weekEnd;
-  }
-});
 
-// Static method to get week start/end dates from any date
-weeklyScheduleSchema.statics.getWeekBounds = function(date: Date) {
-  const inputDate = new Date(date);
-  const dayOfWeek = inputDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  
-  // Calculate Monday of the week (ISO week start)
-  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Handle Sunday
-  const weekStart = new Date(inputDate);
-  weekStart.setDate(inputDate.getDate() - daysFromMonday);
-  weekStart.setHours(0, 0, 0, 0);
-  
-  // Calculate Sunday of the week
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6);
-  weekEnd.setHours(23, 59, 59, 999);
-  
-  return { weekStart, weekEnd };
-};
 
 // Static method to create schedule from template
 weeklyScheduleSchema.statics.createFromTemplate = async function(
-  templateId: Types.ObjectId, 
-  weekStartDate: Date, 
+  templateId: Types.ObjectId,
   createdBy: Types.ObjectId
 ) {
   const ScheduleTemplate = model('ScheduleTemplate');
-  
+
   const template = await ScheduleTemplate.findById(templateId);
   if (!template) {
     throw new Error('Schedule template not found');
   }
-  
-  const { weekStart, weekEnd } = (this.constructor as any).getWeekBounds(weekStartDate);
-  
+
   // Convert template timeslots to weekly timeslots
-  const weeklyTimeslots = template.timeslots
+  const weeklyTimeslots = (template.timeslots || [])
     .filter((slot: any) => slot.isActive)
     .map((slot: any) => ({
       templateTimeslotId: slot.timeslotId,
       dayOfWeek: slot.dayOfWeek,
       startTime: slot.startTime,
       endTime: slot.endTime,
-      locationId: slot.locationId,
-      coachId: slot.coachId,
-      programId: slot.programId,
+      location: slot.location,
+      coachId: template.assignedCoachId,
       maxCapacity: slot.maxCapacity,
       className: slot.className,
       notes: slot.notes,
       isActive: true,
       enrollments: []
     }));
-  
+
   const weeklySchedule = new this({
     gymId: template.gymId,
     templateId: templateId,
-    weekStartDate: weekStart,
-    weekEndDate: weekEnd,
     status: 'draft',
+    assignedCoachId: template.assignedCoachId,
     timeslots: weeklyTimeslots,
     createdBy: createdBy,
     isActive: true
   });
-  
+
   return weeklySchedule;
 };
 

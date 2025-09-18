@@ -15,7 +15,7 @@ export interface ScheduleTemplatesQueryParams {
 export interface CreateScheduleTemplateData {
   name: string;
   description?: string;
-  isDefault?: boolean;
+  assignedCoachId?: string;
   timeslots: CreateTimeslotData[];
 }
 
@@ -23,9 +23,8 @@ export interface CreateTimeslotData {
   dayOfWeek: number; // 1-7 (Monday-Sunday)
   startTime: string; // "09:00" format
   endTime: string;   // "10:00" format
-  locationId: string;
-  coachId: string;
-  programId?: string;
+  location: string;
+  coachId?: string;
   maxCapacity: number;
   className?: string;
   notes?: string;
@@ -34,7 +33,7 @@ export interface CreateTimeslotData {
 export interface UpdateScheduleTemplateData {
   name?: string;
   description?: string;
-  isDefault?: boolean;
+  assignedCoachId?: string;
   timeslots?: CreateTimeslotData[];
 }
 
@@ -105,9 +104,4 @@ export const scheduleTemplatesApi = {
     return response.data;
   },
 
-  // Set template as default
-  setAsDefault: async (id: string): Promise<ScheduleTemplateResponse> => {
-    const response = await api.post(`/api/schedule-templates/${id}/set-default`);
-    return response.data;
-  }
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Stack,
@@ -8,24 +8,21 @@ import {
   Tabs,
   Card,
   Button,
-  Select,
-  ActionIcon
+  Select
 } from '@mantine/core';
 import {
-  IconPlus,
-  IconCalendar,
-  IconChevronLeft,
-  IconChevronRight,
-  IconTemplate
+    IconPlus,
+    IconCalendar,
+    IconTemplate, IconChevronRight
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { AppLayout } from '../../components/layout/AppLayout';
-import { WeeklyScheduleGrid } from '../../components/schedules/WeeklyScheduleGrid';
+import { ScheduleTemplateCalendarView } from '../../components/schedules/ScheduleTemplateCalendarView';
+import { WeeklyScheduleCalendarView } from '../../components/schedules/WeeklyScheduleCalendarView';
 import { ScheduleTemplateModal } from '../../components/schedules/ScheduleTemplateModal';
 import { CreateWeeklyScheduleModal } from '../../components/schedules/CreateWeeklyScheduleModal';
 import { TimeslotModal } from '../../components/schedules/TimeslotModal';
 import { TimeslotEnrollmentModal } from '../../components/schedules/TimeslotEnrollmentModal';
-import { ScheduleStatsDashboard } from '../../components/schedules/ScheduleStatsDashboard';
 import { useScheduleTemplates } from '../../hooks/useScheduleTemplates';
 import { useWeeklySchedules } from '../../hooks/useWeeklySchedules';
 import type { ScheduleTemplate, WeeklySchedule, TemplateTimeslot, WeeklyTimeslot } from '../../types/schedules';
@@ -44,8 +41,7 @@ export function SchedulesPage() {
     fetchScheduleTemplates,
     createScheduleTemplate,
     updateScheduleTemplate,
-    deleteScheduleTemplate,
-    setAsDefault
+    deleteScheduleTemplate
   } = useScheduleTemplates();
 
   // Weekly Schedules state
@@ -64,7 +60,6 @@ export function SchedulesPage() {
   // UI state
   const [selectedTemplate, setSelectedTemplate] = useState<ScheduleTemplate | null>(null);
   const [selectedWeeklySchedule, setSelectedWeeklySchedule] = useState<WeeklySchedule | null>(null);
-  const [currentWeek, setCurrentWeek] = useState(getMonday(new Date()));
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [weeklyModalOpen, setWeeklyModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ScheduleTemplate | null>(null);
@@ -77,14 +72,6 @@ export function SchedulesPage() {
   const [timeslotDayOfWeek, setTimeslotDayOfWeek] = useState(1);
   const [showStatsTab, setShowStatsTab] = useState(false);
 
-  // Get Monday of current/selected week
-  function getMonday(date: Date): Date {
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(date.setDate(diff));
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  }
 
   // Load data on mount
   useEffect(() => {
@@ -92,10 +79,7 @@ export function SchedulesPage() {
       try {
         await Promise.all([
           fetchScheduleTemplates({ limit: 100 }),
-          fetchWeeklySchedules({ 
-            weekStart: currentWeek.toISOString().split('T')[0],
-            weekEnd: new Date(currentWeek.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          })
+          fetchWeeklySchedules()
         ]);
       } catch (err) {
         notifications.show({
@@ -107,7 +91,7 @@ export function SchedulesPage() {
     };
 
     loadData();
-  }, [currentWeek, fetchScheduleTemplates, fetchWeeklySchedules]);
+  }, [fetchScheduleTemplates, fetchWeeklySchedules]);
 
 
   // Error handling
@@ -131,12 +115,7 @@ export function SchedulesPage() {
   // Auto-select first template if none selected
   useEffect(() => {
     if (scheduleTemplates.length > 0 && !selectedTemplate) {
-      const defaultTemplate = scheduleTemplates.find(t => t.isDefault);
-      if (defaultTemplate) {
-        setSelectedTemplate(defaultTemplate);
-      } else {
-        setSelectedTemplate(scheduleTemplates[0]);
-      }
+      setSelectedTemplate(scheduleTemplates[0]);
     }
   }, [scheduleTemplates, selectedTemplate]);
 
@@ -221,13 +200,10 @@ export function SchedulesPage() {
         dayOfWeek: timeslot.dayOfWeek,
         startTime: timeslot.startTime,
         endTime: timeslot.endTime,
-        locationId: timeslot.locationId,
-        coachId: timeslot.coachId,
-        programId: timeslot.programId,
+        location: timeslot.location,
         maxCapacity: timeslot.maxCapacity,
         className: timeslot.className,
         notes: timeslot.notes,
-        isActive: timeslot.isActive,
       };
       setEditingTimeslot(templateTimeslot);
     } else {
@@ -249,9 +225,12 @@ export function SchedulesPage() {
               ...timeslotData 
             }];
 
-        await updateScheduleTemplate(selectedTemplate._id, {
+        const updatedTemplate = await updateScheduleTemplate(selectedTemplate._id, {
           timeslots: updatedTimeslots.map(({ timeslotId, ...slot }) => slot)
         });
+
+        // Update the selected template with the server response
+        setSelectedTemplate(updatedTemplate);
 
         notifications.show({
           title: 'Success',
@@ -318,45 +297,11 @@ export function SchedulesPage() {
     }
   };
 
-  // Week navigation
-  const goToPreviousWeek = () => {
-    const newWeek = new Date(currentWeek);
-    newWeek.setDate(newWeek.getDate() - 7);
-    setCurrentWeek(newWeek);
-  };
 
-  const goToNextWeek = () => {
-    const newWeek = new Date(currentWeek);
-    newWeek.setDate(newWeek.getDate() + 7);
-    setCurrentWeek(newWeek);
-  };
-
-  const goToToday = () => {
-    setCurrentWeek(getMonday(new Date()));
-  };
-
-  const getWeekRangeString = (monday: Date): string => {
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
-    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
-    const mondayStr = monday.toLocaleDateString('en-US', options);
-    const sundayStr = sunday.toLocaleDateString('en-US', options);
-    
-    if (monday.getMonth() === sunday.getMonth()) {
-      return `${mondayStr} - ${sunday.getDate()}, ${monday.getFullYear()}`;
-    } else {
-      return `${mondayStr} - ${sundayStr}, ${monday.getFullYear()}`;
-    }
-  };
-
-  const defaultTemplate = scheduleTemplates?.find(t => t.isDefault);
   const firstTemplate = scheduleTemplates?.length > 0 ? scheduleTemplates[0] : null;
-  const displayTemplate = selectedTemplate || defaultTemplate || firstTemplate;
-  
-  const currentWeekSchedule = weeklySchedules?.find(s =>
-    new Date(s.weekStartDate).getTime() === currentWeek.getTime()
-  );
+  const displayTemplate = selectedTemplate || firstTemplate;
+
+  const currentWeekSchedule = weeklySchedules?.length > 0 ? weeklySchedules[0] : null;
 
   return (
     <AppLayout>
@@ -391,12 +336,6 @@ export function SchedulesPage() {
                 leftSection={<IconCalendar size={16} />}
               >
                 Active Schedules
-              </Tabs.Tab>
-              <Tabs.Tab 
-                value="statistics" 
-                leftSection={<IconChevronRight size={16} />}
-              >
-                Statistics
               </Tabs.Tab>
             </Tabs.List>
           </Card>
@@ -435,7 +374,7 @@ export function SchedulesPage() {
                       }}
                       data={scheduleTemplates.map(template => ({
                         value: template._id,
-                        label: `${template.name}${template.isDefault ? ' (Default)' : ''}`,
+                        label: template.name,
                       }))}
                     />
                   ) : (
@@ -446,52 +385,63 @@ export function SchedulesPage() {
                 </Card>
               )}
 
-              {/* Template Grid */}
-              <WeeklyScheduleGrid
-                template={displayTemplate}
-                isTemplate={true}
-                onAddTimeslot={handleAddTimeslot}
-                onEditTimeslot={handleEditTimeslot}
-              />
+              {/* Template Calendar */}
+              {displayTemplate && user?.gymId && (
+                <ScheduleTemplateCalendarView
+                  template={displayTemplate}
+                  onAddTimeslot={(timeslotData) => {
+                    // Convert the timeslotData to match expected format
+                    handleSaveTimeslot(timeslotData);
+                  }}
+                  onEditTimeslot={(timeslotId, timeslotData) => {
+                    // Find the timeslot to edit and call handleSaveTimeslot
+                    setEditingTimeslot(displayTemplate.timeslots.find(t => t.timeslotId === timeslotId) || null);
+                    handleSaveTimeslot(timeslotData);
+                  }}
+                  onDeleteTimeslot={async (timeslotId) => {
+                    try {
+                      const updatedTimeslots = displayTemplate.timeslots.filter(slot => slot.timeslotId !== timeslotId);
+                      const updatedTemplate = await updateScheduleTemplate(displayTemplate._id, {
+                        timeslots: updatedTimeslots.map(({ timeslotId, ...slot }) => slot)
+                      });
+
+                      // Update the selected template with the server response
+                      setSelectedTemplate(updatedTemplate);
+
+                      notifications.show({
+                        title: 'Success',
+                        message: 'Timeslot deleted successfully',
+                        color: 'green',
+                      });
+                    } catch (err) {
+                      notifications.show({
+                        title: 'Error',
+                        message: 'Failed to delete timeslot',
+                        color: 'red',
+                      });
+                    }
+                  }}
+                  loading={templatesLoading}
+                  gymId={user.gymId || ''}
+                />
+              )}
             </Stack>
           </Tabs.Panel>
 
           {/* Active Schedules Tab */}
           <Tabs.Panel value="schedules">
             <Stack gap="md">
-              {/* Week Navigation */}
+              {/* Schedule Actions */}
               <Card>
                 <Group justify="space-between">
-                  <Group>
-                    <ActionIcon
-                      variant="default"
-                      onClick={goToPreviousWeek}
-                      size="lg"
-                    >
-                      <IconChevronLeft size={16} />
-                    </ActionIcon>
-                    
-                    <Group gap="xs">
-                      <Text fw={500} size="lg">
-                        {getWeekRangeString(currentWeek)}
-                      </Text>
-                      <Button
-                        variant="light"
-                        size="xs"
-                        onClick={goToToday}
-                      >
-                        Today
-                      </Button>
-                    </Group>
-                    
-                    <ActionIcon
-                      variant="default"
-                      onClick={goToNextWeek}
-                      size="lg"
-                    >
-                      <IconChevronRight size={16} />
-                    </ActionIcon>
-                  </Group>
+                  <div>
+                    <Text fw={500} size="lg">
+                      Active Schedules
+                    </Text>
+                    <Text size="sm" c="dimmed">
+                      Weekly schedules created from templates
+                    </Text>
+                  </div>
 
                   <Button
                     leftSection={<IconPlus size={16} />}
@@ -502,59 +452,92 @@ export function SchedulesPage() {
                 </Group>
               </Card>
 
-              {/* Weekly Schedule Grid */}
-              <WeeklyScheduleGrid
-                weeklySchedule={currentWeekSchedule}
-                isTemplate={false}
-                onAddTimeslot={handleAddTimeslot}
-                onEditTimeslot={handleEditTimeslot}
-                onEnrollClient={handleEnrollClient}
-                onCopyFromTemplate={handleCopyFromTemplate}
-              />
+              {/* Weekly Schedule Calendar */}
+              {currentWeekSchedule ? (
+                <WeeklyScheduleCalendarView
+                  schedule={currentWeekSchedule}
+                  onViewTimeslot={handleEnrollClient}
+                  onEditSchedule={() => {
+                    // TODO: Add edit schedule functionality
+                    notifications.show({
+                      title: 'Info',
+                      message: 'Edit schedule functionality will be added soon',
+                      color: 'blue',
+                    });
+                  }}
+                  loading={schedulesLoading}
+                />
+              ) : (
+                <Card>
+                  <Stack align="center" gap="md" py="xl">
+                    <Text size="lg" c="dimmed">
+                      No schedule for this week
+                    </Text>
+                    <Text size="sm" c="dimmed" ta="center">
+                      Copy from a template or create a schedule manually
+                    </Text>
+                    <Group gap="sm">
+                      <Button
+                        leftSection={<IconPlus size={16} />}
+                        variant="light"
+                        onClick={handleCopyFromTemplate}
+                      >
+                        Copy from Template
+                      </Button>
+                      <Button
+                        leftSection={<IconPlus size={16} />}
+                        onClick={handleCreateWeeklySchedule}
+                      >
+                        Create Schedule
+                      </Button>
+                    </Group>
+                  </Stack>
+                </Card>
+              )}
             </Stack>
-          </Tabs.Panel>
-
-          {/* Statistics Tab */}
-          <Tabs.Panel value="statistics">
-            <ScheduleStatsDashboard />
           </Tabs.Panel>
         </Tabs>
       </Stack>
 
       {/* Modals */}
-      <ScheduleTemplateModal
-        opened={templateModalOpen}
-        onClose={() => {
-          setTemplateModalOpen(false);
-          setEditingTemplate(null);
-        }}
-        onSave={handleSaveTemplate}
-        template={editingTemplate}
-        loading={templatesLoading}
-        gymId={user?.gymId || ''}
-      />
+      {user?.gymId && (
+        <ScheduleTemplateModal
+          opened={templateModalOpen}
+          onClose={() => {
+            setTemplateModalOpen(false);
+            setEditingTemplate(null);
+          }}
+          onSave={handleSaveTemplate}
+          template={editingTemplate}
+          loading={templatesLoading}
+          gymId={user.gymId}
+        />
+      )}
 
       <CreateWeeklyScheduleModal
         opened={weeklyModalOpen}
         onClose={() => setWeeklyModalOpen(false)}
         onSave={handleSaveWeeklySchedule}
         templates={scheduleTemplates}
+        gymId={user?.gymId || ''}
         loading={schedulesLoading}
       />
 
       {/* New Modals */}
-      <TimeslotModal
-        opened={timeslotModalOpen}
-        onClose={() => {
-          setTimeslotModalOpen(false);
-          setEditingTimeslot(null);
-        }}
-        onSave={handleSaveTimeslot}
-        timeslot={editingTimeslot}
-        dayOfWeek={timeslotDayOfWeek}
-        loading={templatesLoading}
-        gymId={user?.gymId || ''}
-      />
+      {user?.gymId && (
+        <TimeslotModal
+          opened={timeslotModalOpen}
+          onClose={() => {
+            setTimeslotModalOpen(false);
+            setEditingTimeslot(null);
+          }}
+          onSave={handleSaveTimeslot}
+          timeslot={editingTimeslot}
+          dayOfWeek={timeslotDayOfWeek}
+          loading={templatesLoading}
+          gymId={user.gymId}
+        />
+      )}
 
       <TimeslotEnrollmentModal
         opened={enrollmentModalOpen}

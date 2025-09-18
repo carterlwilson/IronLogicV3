@@ -72,6 +72,13 @@ export const getUsers = async (req: AuthRequest, res: Response): Promise<void> =
       User.countDocuments(query)
     ]);
 
+    // Transform users to flatten gym structure
+    const transformedUsers = users.map(user => ({
+      ...user,
+      gymId: user.gymId ? (user.gymId as any)._id?.toString() || user.gymId.toString() : undefined,
+      gymName: user.gymId ? (user.gymId as any).name : undefined
+    }));
+
     // Calculate pagination info
     const totalPages = Math.ceil(total / limitNum);
     const hasNextPage = pageNum < totalPages;
@@ -80,7 +87,7 @@ export const getUsers = async (req: AuthRequest, res: Response): Promise<void> =
     res.json({
       success: true,
       data: {
-        users,
+        users: transformedUsers,
         pagination: {
           page: pageNum,
           limit: limitNum,
@@ -147,11 +154,11 @@ export const getUser = async (req: AuthRequest, res: Response): Promise<void> =>
         .lean();
     }
 
-    // Transform to ensure proper ID format
+    // Transform to flatten gym structure
     const transformedUser = {
       ...user,
-      gymId: (user.gymId as any)?._id || user.gymId, // Ensure ID is string
-      gym: user.gymId // Keep populated data for display
+      gymId: user.gymId ? (user.gymId as any)._id?.toString() || user.gymId.toString() : undefined,
+      gymName: user.gymId ? (user.gymId as any).name : undefined
     };
 
     res.json({
@@ -250,9 +257,16 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
       .populate({ path: 'gymId', select: 'name location' })
       .lean();
 
+    // Transform to flatten gym structure
+    const transformedUser = {
+      ...userResponse!,
+      gymId: userResponse!.gymId ? (userResponse!.gymId as any)._id?.toString() || userResponse!.gymId.toString() : undefined,
+      gymName: userResponse!.gymId ? (userResponse!.gymId as any).name : undefined
+    };
+
     res.status(201).json({
       success: true,
-      data: { user: userResponse },
+      data: { user: transformedUser },
       message: 'User created successfully'
     });
 
@@ -356,11 +370,11 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
       await client.save();
     }
 
-    // Transform to ensure proper ID format
+    // Transform to flatten gym structure
     const transformedUser = {
       ...updatedUser!,
-      gymId: (updatedUser!.gymId as any)?._id || updatedUser!.gymId, // Ensure ID is string
-      gym: updatedUser!.gymId // Keep populated data for display
+      gymId: updatedUser!.gymId ? (updatedUser!.gymId as any)._id?.toString() || updatedUser!.gymId.toString() : undefined,
+      gymName: updatedUser!.gymId ? (updatedUser!.gymId as any).name : undefined
     };
 
     res.json({

@@ -10,17 +10,18 @@ import {
   Alert,
   LoadingOverlay
 } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
-import { IconCalendar, IconAlertCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconUser } from '@tabler/icons-react';
 import { type ScheduleTemplate } from '../../types/schedules';
 import { type CreateWeeklyScheduleData } from '../../lib/weekly-schedules-api';
+import { gymsApi, type StaffMember } from '../../lib/gyms-api';
 
 interface CreateWeeklyScheduleModalProps {
   opened: boolean;
   onClose: () => void;
   onSave: (scheduleData: CreateWeeklyScheduleData) => void;
   templates: ScheduleTemplate[];
+  gymId: string;
   loading?: boolean;
 }
 
@@ -29,30 +30,44 @@ export function CreateWeeklyScheduleModal({
   onClose,
   onSave,
   templates,
+  gymId,
   loading = false
 }: CreateWeeklyScheduleModalProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<ScheduleTemplate | null>(null);
+  const [coaches, setCoaches] = useState<StaffMember[]>([]);
+  const [loadingCoaches, setLoadingCoaches] = useState(false);
   
   const form = useForm({
     initialValues: {
       templateId: '',
-      weekStartDate: null as Date | null,
+      assignedCoachId: '',
       notes: '',
     },
     validate: {
       templateId: (value) => (!value ? 'Please select a template' : null),
-      weekStartDate: (value) => {
-        if (!value) return 'Please select a week start date';
-        
-        // Check if it's a Monday
-        if (value.getDay() !== 1) {
-          return 'Week start date must be a Monday';
-        }
-        
-        return null;
-      },
     },
   });
+
+  // Load coaches when modal opens
+  useEffect(() => {
+    if (opened && gymId) {
+      loadCoaches();
+    }
+  }, [opened, gymId]);
+
+  const loadCoaches = async () => {
+    try {
+      setLoadingCoaches(true);
+      const response = await gymsApi.getGymStaff(gymId);
+      if (response.success) {
+        setCoaches(response.data.staff);
+      }
+    } catch (error) {
+      console.error('Error loading coaches:', error);
+    } finally {
+      setLoadingCoaches(false);
+    }
+  };
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -67,8 +82,14 @@ export function CreateWeeklyScheduleModal({
     if (form.values.templateId) {
       const template = templates.find(t => t._id === form.values.templateId);
       setSelectedTemplate(template || null);
+      
+      // Set default coach from template
+      if (template?.assignedCoachId) {
+        form.setFieldValue('assignedCoachId', template.assignedCoachId);
+      }
     } else {
       setSelectedTemplate(null);
+      form.setFieldValue('assignedCoachId', '');
     }
   }, [form.values.templateId, templates]);
 
@@ -81,22 +102,13 @@ export function CreateWeeklyScheduleModal({
 
     const scheduleData: CreateWeeklyScheduleData = {
       templateId: form.values.templateId,
-      weekStartDate: form.values.weekStartDate!.toISOString(),
+      assignedCoachId: selectedTemplate?.assignedCoachId,
       notes: form.values.notes || undefined,
     };
 
     onSave(scheduleData);
   };
 
-  const getNextMonday = (): Date => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek; // If Sunday, next Monday is 1 day away
-    const nextMonday = new Date(today);
-    nextMonday.setDate(today.getDate() + daysUntilMonday);
-    nextMonday.setHours(0, 0, 0, 0);
-    return nextMonday;
-  };
 
   const templateOptions = Array.isArray(templates) 
     ? templates
@@ -108,21 +120,11 @@ export function CreateWeeklyScheduleModal({
         }))
     : [];
 
-  const formatWeekRange = (startDate: Date): string => {
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'short',
-      month: 'short', 
-      day: 'numeric' 
-    };
-    
-    const startStr = startDate.toLocaleDateString('en-US', options);
-    const endStr = endDate.toLocaleDateString('en-US', options);
-    
-    return `${startStr} - ${endStr}`;
-  };
+  const coachOptions = coaches.map(coach => ({
+    value: coach._id,
+    label: `${coach.name} (${coach.userType})`,
+  }));
+
 
   return (
     <Modal
@@ -143,50 +145,6 @@ export function CreateWeeklyScheduleModal({
             searchable
             {...form.getInputProps('templateId')}
           />
-
-          {selectedTemplate && (
-            <Alert color="blue" icon={<IconAlertCircle size={16} />}>
-              <Text size="sm" fw={500}>Template: {selectedTemplate.name}</Text>
-              {selectedTemplate.description && (
-                <Text size="sm" mt={4}>{selectedTemplate.description}</Text>
-              )}
-              <Text size="sm" mt={4}>
-                This template has {selectedTemplate.totalTimeslots || 0} timeslots 
-                across {selectedTemplate.totalCoaches || 0} coaches.
-              </Text>
-            </Alert>
-          )}
-
-          <DateInput
-            label="Week Start Date"
-            placeholder="Select a Monday"
-            required
-            leftSection={<IconCalendar size={16} />}
-            defaultValue={getNextMonday()}
-            getDayProps={(date) => {
-              const isMonday = date.getDay() === 1;
-              return {
-                style: {
-                  backgroundColor: isMonday ? undefined : '#f8f9fa',
-                  color: isMonday ? undefined : '#adb5bd',
-                  cursor: isMonday ? 'pointer' : 'not-allowed',
-                },
-              };
-            }}
-            filter={(date) => date.getDay() === 1} // Only allow Mondays
-            {...form.getInputProps('weekStartDate')}
-          />
-
-          {form.values.weekStartDate && (
-            <Alert color="teal">
-              <Text size="sm">
-                Schedule will be created for the week of{' '}
-                <Text component="span" fw={500}>
-                  {formatWeekRange(form.values.weekStartDate)}
-                </Text>
-              </Text>
-            </Alert>
-          )}
 
           <Textarea
             label="Notes"

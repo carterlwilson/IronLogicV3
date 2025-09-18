@@ -65,21 +65,19 @@ const createIndexes = async () => {
     console.log('📅 Creating ScheduleTemplate indexes...');
     await db.collection('scheduletemplates').createIndex({ gymId: 1 });
     await db.collection('scheduletemplates').createIndex({ name: 1 });
-    await db.collection('scheduletemplates').createIndex({ isDefault: 1 });
     await db.collection('scheduletemplates').createIndex({ 'timeslots.dayOfWeek': 1 });
     await db.collection('scheduletemplates').createIndex({ 'timeslots.coachId': 1 });
-    await db.collection('scheduletemplates').createIndex({ 'timeslots.locationId': 1 });
 
     // Weekly Schedules collection indexes
     console.log('🗓️  Creating WeeklySchedule indexes...');
     await db.collection('weeklyschedules').createIndex({ gymId: 1 });
-    await db.collection('weeklyschedules').createIndex({ weekStartDate: 1 });
     await db.collection('weeklyschedules').createIndex({ status: 1 });
     await db.collection('weeklyschedules').createIndex({ templateId: 1 });
-    await db.collection('weeklyschedules').createIndex({ gymId: 1, weekStartDate: 1 });
+    await db.collection('weeklyschedules').createIndex({ gymId: 1, status: 1 });
     await db.collection('weeklyschedules').createIndex({ 'timeslots.coachId': 1 });
-    await db.collection('weeklyschedules').createIndex({ 'timeslots.enrolledClients.clientId': 1 });
+    await db.collection('weeklyschedules').createIndex({ 'timeslots.enrollments.clientId': 1 });
     await db.collection('weeklyschedules').createIndex({ 'timeslots.dayOfWeek': 1 });
+    await db.collection('weeklyschedules').createIndex({ createdAt: 1 });
 
     // Client collection indexes
     console.log('👤 Creating Client indexes...');
@@ -120,11 +118,11 @@ const createIndexes = async () => {
       isTemplate: 1 
     });
     
-    // Schedule queries by gym and week
-    await db.collection('weeklyschedules').createIndex({ 
-      gymId: 1, 
-      weekStartDate: 1, 
-      status: 1 
+    // Schedule queries by gym and status
+    await db.collection('weeklyschedules').createIndex({
+      gymId: 1,
+      status: 1,
+      isActive: 1
     });
     
     // Client membership queries

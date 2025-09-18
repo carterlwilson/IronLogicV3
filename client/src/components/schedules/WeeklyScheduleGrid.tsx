@@ -58,7 +58,7 @@ export function WeeklyScheduleGrid({
           <Group justify="space-between">
             <div>
               <Text fw={600} size="lg">
-                Week of {weeklySchedule?.weekStartDate ? new Date(weeklySchedule.weekStartDate).toLocaleDateString() : 'Select Week'}
+                Weekly Schedule
               </Text>
               <Text size="sm" c="dimmed">
                 {weeklySchedule?.status && (

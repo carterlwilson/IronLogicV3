@@ -6,9 +6,8 @@ interface TemplateTimeslot {
   dayOfWeek: number; // 1-7 (Monday-Sunday)
   startTime: string; // "09:00" format
   endTime: string;   // "10:00" format
-  locationId: Types.ObjectId; // reference to gym location
-  coachId: Types.ObjectId; // reference to User (coach)
-  programId?: Types.ObjectId; // optional reference to WorkoutProgram
+  location: string; // location name/description
+  coachId?: Types.ObjectId; // reference to User (coach)
   maxCapacity: number;
   className?: string; // e.g., "Morning Strength", "HIIT Class"
   notes?: string;
@@ -21,7 +20,7 @@ export interface IScheduleTemplate extends Document {
   gymId: Types.ObjectId; // reference to Gym
   name: string;
   description?: string;
-  isDefault: boolean; // only one default template per gym
+  assignedCoachId?: Types.ObjectId; // reference to User (coach) assigned to this schedule
   timeslots: TemplateTimeslot[];
   isActive: boolean;
   createdAt: Date;
@@ -65,26 +64,17 @@ const timeslotSchema = new Schema<TemplateTimeslot>({
       message: 'End time must be in HH:MM format (24-hour)'
     }
   },
-  locationId: {
-    type: Schema.Types.ObjectId,
+  location: {
+    type: String,
     required: true,
-    validate: {
-      validator: function(locationId: Types.ObjectId) {
-        // Will be validated against actual gym locations in controller
-        return Types.ObjectId.isValid(locationId);
-      },
-      message: 'Location ID must be a valid ObjectId'
-    }
+    trim: true,
+    maxlength: 100,
+    minlength: 1
   },
   coachId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true
-  },
-  programId: {
-    type: Schema.Types.ObjectId,
-    ref: 'WorkoutProgram',
-    default: null // Optional - can be assigned later
+    default: null
   },
   maxCapacity: {
     type: Number,
@@ -130,9 +120,10 @@ const scheduleTemplateSchema = new Schema<IScheduleTemplate>({
     maxlength: 500,
     trim: true
   },
-  isDefault: {
-    type: Boolean,
-    default: false
+  assignedCoachId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    default: null // Optional - coach can be assigned to entire schedule
   },
   timeslots: [timeslotSchema],
   isActive: {
@@ -152,9 +143,8 @@ const scheduleTemplateSchema = new Schema<IScheduleTemplate>({
 
 // Indexes for performance
 scheduleTemplateSchema.index({ gymId: 1, isActive: 1 });
-scheduleTemplateSchema.index({ gymId: 1, isDefault: 1 });
+scheduleTemplateSchema.index({ assignedCoachId: 1 });
 scheduleTemplateSchema.index({ 'timeslots.coachId': 1 });
-scheduleTemplateSchema.index({ 'timeslots.programId': 1 });
 
 // Text search index
 scheduleTemplateSchema.index({ 
@@ -169,31 +159,18 @@ scheduleTemplateSchema.index({
   'timeslots.dayOfWeek': 1, 
   'timeslots.startTime': 1, 
   'timeslots.endTime': 1,
-  'timeslots.locationId': 1 
+  'timeslots.location': 1 
 });
 
-// Pre-save middleware to ensure only one default template per gym
-scheduleTemplateSchema.pre('save', async function(this: IScheduleTemplate) {
-  if (this.isDefault && this.isModified('isDefault')) {
-    // Remove default flag from all other templates for this gym
-    await this.model().updateMany(
-      { 
-        gymId: this.gymId, 
-        _id: { $ne: this._id },
-        isActive: true 
-      },
-      { isDefault: false }
-    );
-  }
-});
 
 // Virtual for total timeslots count
 scheduleTemplateSchema.virtual('totalTimeslots').get(function(this: IScheduleTemplate) {
-  return this.timeslots.filter(slot => slot.isActive).length;
+  return this.timeslots?.filter(slot => slot.isActive).length || 0;
 });
 
 // Virtual for coaches count
 scheduleTemplateSchema.virtual('totalCoaches').get(function(this: IScheduleTemplate) {
+  if (!this.timeslots) return 0;
   const coaches = new Set();
   this.timeslots.forEach(slot => {
     if (slot.isActive && slot.coachId) {
@@ -216,7 +193,7 @@ scheduleTemplateSchema.statics.validateTimeslotConflicts = function(timeslots: T
       
       // Check if same day, location, and overlapping times
       if (slot1.dayOfWeek === slot2.dayOfWeek && 
-          slot1.locationId?.toString() === slot2.locationId?.toString()) {
+          slot1.location === slot2.location && slot1.location) {
         
         const start1 = new Date(`2000-01-01T${slot1.startTime}:00`);
         const end1 = new Date(`2000-01-01T${slot1.endTime}:00`);
@@ -226,24 +203,7 @@ scheduleTemplateSchema.statics.validateTimeslotConflicts = function(timeslots: T
         // Check for time overlap
         if (start1 < end2 && start2 < end1) {
           conflicts.push(
-            `Timeslot conflict: ${slot1.startTime}-${slot1.endTime} overlaps with ${slot2.startTime}-${slot2.endTime} on day ${slot1.dayOfWeek} at location ${slot1.locationId}`
-          );
-        }
-      }
-      
-      // Check coach double-booking
-      if (slot1.dayOfWeek === slot2.dayOfWeek && 
-          slot1.coachId?.toString() === slot2.coachId?.toString()) {
-        
-        const start1 = new Date(`2000-01-01T${slot1.startTime}:00`);
-        const end1 = new Date(`2000-01-01T${slot1.endTime}:00`);
-        const start2 = new Date(`2000-01-01T${slot2.startTime}:00`);
-        const end2 = new Date(`2000-01-01T${slot2.endTime}:00`);
-        
-        // Check for time overlap
-        if (start1 < end2 && start2 < end1) {
-          conflicts.push(
-            `Coach conflict: Coach ${slot1.coachId} is double-booked on day ${slot1.dayOfWeek} from ${slot1.startTime}-${slot1.endTime} and ${slot2.startTime}-${slot2.endTime}`
+            `Timeslot conflict: ${slot1.startTime}-${slot1.endTime} overlaps with ${slot2.startTime}-${slot2.endTime} on day ${slot1.dayOfWeek} at location ${slot1.location}`
           );
         }
       }
@@ -296,7 +256,7 @@ scheduleTemplateSchema.statics.getTemplatesWithStats = async function(gymId: Typ
       }
     },
     {
-      $sort: { isDefault: -1, updatedAt: -1 }
+      $sort: { updatedAt: -1 }
     }
   ]);
 };
