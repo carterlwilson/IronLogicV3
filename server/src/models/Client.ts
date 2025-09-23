@@ -11,17 +11,6 @@ export interface IClient extends Document {
       phone: string;
       relationship: string;
     };
-    fitnessGoals?: string[];
-    medicalConditions?: string[];
-    preferences?: {
-      preferredCoaches?: Schema.Types.ObjectId[];
-      workoutTimes?: string[];
-      notificationPreferences?: {
-        email: boolean;
-        sms: boolean;
-        push: boolean;
-      };
-    };
   };
   membershipInfo: {
     joinDate: Date;

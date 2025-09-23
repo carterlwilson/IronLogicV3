@@ -90,6 +90,13 @@ const createIndexes = async () => {
     await db.collection('clients').createIndex({ 'activeBenchmarks.templateId': 1 });
     await db.collection('clients').createIndex({ 'activeBenchmarks.recordedAt': 1 });
 
+    // Client Benchmark History collection indexes
+    console.log('📈 Creating ClientBenchmarkHistory indexes...');
+    await db.collection('clientbenchmarkhistories').createIndex({ clientId: 1, templateId: 1, recordedAt: -1 });
+    await db.collection('clientbenchmarkhistories').createIndex({ clientId: 1, isActive: 1 });
+    await db.collection('clientbenchmarkhistories').createIndex({ templateId: 1 });
+    await db.collection('clientbenchmarkhistories').createIndex({ recordedAt: -1 });
+
     // Compound indexes for common queries
     console.log('🔗 Creating compound indexes...');
     

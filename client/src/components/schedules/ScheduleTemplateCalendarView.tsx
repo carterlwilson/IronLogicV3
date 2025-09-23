@@ -104,6 +104,7 @@ export function ScheduleTemplateCalendarView({
                   mode="template"
                   onAddTimeslot={() => handleAddTimeslot(dayOfWeek)}
                   onTimeslotAction={handleTimeslotAction}
+                  canManageTimeslots={true}
                 />
               </Grid.Col>
             ))}

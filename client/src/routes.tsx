@@ -12,6 +12,7 @@ import { ActivitiesPage } from './pages/activities/ActivitiesPage.tsx'
 import { ActivityGroupsPage } from './pages/activity-groups/ActivityGroupsPage.tsx'
 import { BenchmarkTemplatesPage } from './pages/benchmark-templates/BenchmarkTemplatesPage.tsx'
 import { SchedulesPage } from './pages/schedules/SchedulesPage'
+import { ClientsPage } from './pages/clients/ClientsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { MobilePage } from './pages/MobilePage'
@@ -41,6 +42,7 @@ export function AppRoutes() {
       <Route path="/activity-groups" element={<GymOwnerOnly><ActivityGroupsPage /></GymOwnerOnly>} />
       <Route path="/benchmark-templates" element={<GymOwnerOnly><BenchmarkTemplatesPage /></GymOwnerOnly>} />
       <Route path="/schedules" element={<GymOwnerOnly><SchedulesPage /></GymOwnerOnly>} />
+      <Route path="/clients" element={<GymOwnerOnly><ClientsPage /></GymOwnerOnly>} />
       
       {/* Legacy redirects */}
       <Route path="/schedule-templates" element={<Navigate to="/schedules?tab=templates" replace />} />

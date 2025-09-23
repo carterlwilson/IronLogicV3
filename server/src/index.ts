@@ -9,6 +9,7 @@ import { connectDB, getConnectionStatus, getDatabaseStats } from './config/datab
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import gymRoutes from './routes/gyms';
+import clientRoutes from './routes/clients';
 import activityRoutes from './routes/activities';
 import { activityGroupsRouter } from './routes/activityGroups';
 import benchmarkTemplateRoutes from './routes/benchmarkTemplates';
@@ -132,6 +133,7 @@ app.get('/api/status', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/gyms', gymRoutes);
+app.use('/api/clients', clientRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/activity-groups', activityGroupsRouter);
 app.use('/api/benchmark-templates', benchmarkTemplateRoutes);

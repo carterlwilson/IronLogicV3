@@ -1,47 +1,5 @@
 // Client-specific types (serialized for JSON/API communication)
 
-export interface Gym {
-  _id: string;
-  name: string;
-  ownerId: string | null;
-  phone: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  locations: GymLocation[];
-  coachCount: number;
-  clientCount: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GymLocation {
-  locationId: string;
-  name: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    zipCode: string;
-    country: string;
-  };
-  capacity: number;
-  amenities: string[];
-  operatingHours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      closed?: boolean;
-    };
-  };
-  isActive: boolean;
-}
-
 // Workout Program Types
 export interface WorkoutProgram {
   _id: string;
@@ -102,58 +60,4 @@ export interface ProgramActivity {
 export interface VolumeTarget {
   activityGroup: string;
   targetPercentage: number;
-}
-
-// Client Types
-export interface Client {
-  _id: string;
-  userId: string;
-  gymId: string;
-  personalInfo: {
-    firstName: string;
-    lastName: string;
-    dateOfBirth?: string;
-    phone?: string;
-    emergencyContact?: {
-      name: string;
-      phone: string;
-      relationship: string;
-    };
-  };
-  membershipInfo: {
-    startDate: string;
-    membershipType: string;
-    isActive: boolean;
-  };
-  currentProgram?: {
-    programId: string;
-    currentBlockIndex: number;
-    currentWeekIndex: number;
-    startDate: string;
-  };
-  activeBenchmarks: ClientBenchmark[];
-  coachId?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ClientBenchmark {
-  benchmarkId: string;
-  templateId: string;
-  value: {
-    weight?: number;
-    time?: number;
-    reps?: number;
-  };
-  unit: string;
-  recordedAt: string;
-  recordedBy: string;
-}
-
-export interface ClientEnrollment {
-  clientId: string;
-  enrolledAt: string;
-  status: 'enrolled' | 'cancelled' | 'completed' | 'no-show';
-  notes?: string;
 }

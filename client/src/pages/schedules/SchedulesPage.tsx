@@ -167,6 +167,33 @@ export function SchedulesPage() {
     }
   };
 
+  const handleDeleteTemplate = async (template: ScheduleTemplate) => {
+    if (!window.confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteScheduleTemplate(template._id);
+
+      // Clear selection if deleted template was selected
+      if (selectedTemplate?._id === template._id) {
+        setSelectedTemplate(null);
+      }
+
+      notifications.show({
+        title: 'Success',
+        message: 'Template deleted successfully',
+        color: 'green',
+      });
+    } catch (err) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete template',
+        color: 'red',
+      });
+    }
+  };
+
   // Weekly schedule handlers
   const handleCreateWeeklySchedule = () => {
     setWeeklyModalOpen(true);
@@ -519,19 +546,46 @@ export function SchedulesPage() {
               {!templatesLoading && (
                 <Card>
                   {scheduleTemplates.length > 0 ? (
-                    <Select
-                      label="Select Template to View/Edit"
-                      placeholder="Choose a template..."
-                      value={selectedTemplate?._id || ''}
-                      onChange={(value) => {
-                        const template = scheduleTemplates.find(t => t._id === value);
-                        setSelectedTemplate(template || null);
-                      }}
-                      data={scheduleTemplates.map(template => ({
-                        value: template._id,
-                        label: template.name,
-                      }))}
-                    />
+                    <Group align="flex-end" gap="md">
+                      <Select
+                        label="Select Template to View/Edit"
+                        placeholder="Choose a template..."
+                        value={selectedTemplate?._id || ''}
+                        onChange={(value) => {
+                          const template = scheduleTemplates.find(t => t._id === value);
+                          setSelectedTemplate(template || null);
+                        }}
+                        data={scheduleTemplates.map(template => ({
+                          value: template._id,
+                          label: template.name,
+                        }))}
+                        style={{ flex: 1 }}
+                      />
+                      {selectedTemplate && canManageTimeslots && (
+                        <Menu shadow="md" width={200}>
+                          <Menu.Target>
+                            <ActionIcon size="lg" variant="light">
+                              <IconDots size={16} />
+                            </ActionIcon>
+                          </Menu.Target>
+                          <Menu.Dropdown>
+                            <Menu.Item
+                              leftSection={<IconEdit size={14} />}
+                              onClick={() => handleEditTemplate(selectedTemplate)}
+                            >
+                              Edit Template
+                            </Menu.Item>
+                            <Menu.Item
+                              leftSection={<IconTrash size={14} />}
+                              color="red"
+                              onClick={() => handleDeleteTemplate(selectedTemplate)}
+                            >
+                              Delete Template
+                            </Menu.Item>
+                          </Menu.Dropdown>
+                        </Menu>
+                      )}
+                    </Group>
                   ) : (
                     <Text c="dimmed" ta="center" py="md">
                       No schedule templates found. Create your first template to get started.

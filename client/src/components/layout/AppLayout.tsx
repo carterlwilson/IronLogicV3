@@ -80,7 +80,7 @@ const getNavigationItems = (userType: string): NavigationItem[] => {
         {
           icon: <IconUsers size="1.1rem" />,
           label: 'Clients',
-          href: '/gym/users',
+          href: '/clients',
         },
         {
           icon: <IconBuilding size="1.1rem" />,
